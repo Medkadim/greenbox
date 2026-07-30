@@ -11,11 +11,15 @@ import {
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { getCustomerProfileByUserId } from "@/lib/data/customer";
+import { getCurrentSubscriptionForCustomer } from "@/lib/data/subscription";
 import { getServerSession } from "@/lib/session";
 
 export default async function CustomerDashboardPage() {
   const session = await getServerSession();
   const profile = await getCustomerProfileByUserId(session!.user.id);
+  const subscription = profile
+    ? await getCurrentSubscriptionForCustomer(profile.id)
+    : null;
 
   return (
     <div className="space-y-6">
@@ -66,11 +70,28 @@ export default async function CustomerDashboardPage() {
             <CardDescription>Status &amp; remaining meals</CardDescription>
           </CardHeader>
           <CardContent>
-            <EmptyState
-              icon={CalendarDays}
-              title="No active subscription"
-              description="Available once the subscription module ships."
-            />
+            {subscription ? (
+              <div className="space-y-2">
+                <p className="font-medium">{subscription.plan.name}</p>
+                <p className="text-muted-foreground text-sm">
+                  {subscription.remainingMeals} meals remaining
+                </p>
+                <Button asChild size="sm" variant="outline">
+                  <Link href="/dashboard/subscription">Manage</Link>
+                </Button>
+              </div>
+            ) : (
+              <EmptyState
+                icon={CalendarDays}
+                title="No active subscription"
+                description="Choose a plan to get started."
+                action={
+                  <Button asChild size="sm">
+                    <Link href="/dashboard/subscription">View plans</Link>
+                  </Button>
+                }
+              />
+            )}
           </CardContent>
         </Card>
         <Card>
