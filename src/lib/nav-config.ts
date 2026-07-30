@@ -11,6 +11,7 @@ export const NAV_ITEMS: Record<Role, { label: string; href: string }[]> = {
   ADMIN: [
     { label: "Overview", href: "/admin" },
     { label: "Customers", href: "/admin/customers" },
+    { label: "Meals", href: "/admin/meals" },
     { label: "Plans", href: "/admin/plans" },
     { label: "Subscriptions", href: "/admin/subscriptions" },
   ],
