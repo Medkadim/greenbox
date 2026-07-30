@@ -1,0 +1,537 @@
+// GreenBox — healthy meal subscription platform
+// Prisma schema: see https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------------------------------------------------------------------------
+// Auth (Better Auth compatible schema: user / session / account / verification)
+// ---------------------------------------------------------------------------
+
+enum UserRole {
+  CUSTOMER
+  KITCHEN_CHEF
+  DELIVERY_DRIVER
+  ADMIN
+}
+
+model User {
+  id                  String   @id @default(cuid())
+  name                String?
+  email               String?  @unique
+  emailVerified       Boolean  @default(false)
+  phoneNumber         String?  @unique
+  phoneNumberVerified Boolean  @default(false)
+  image               String?
+  role                UserRole @default(CUSTOMER)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  sessions        Session[]
+  accounts        Account[]
+  customerProfile CustomerProfile?
+  driver          Driver?
+  notifications   Notification[]
+
+  @@map("user")
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  expiresAt DateTime
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id @default(cuid())
+  accountId             String
+  providerId            String
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("account")
+}
+
+model Verification {
+  id         String    @id @default(cuid())
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime? @default(now())
+  updatedAt  DateTime? @updatedAt
+
+  @@map("verification")
+}
+
+// ---------------------------------------------------------------------------
+// Customer
+// ---------------------------------------------------------------------------
+
+enum PreferenceType {
+  LIKE
+  DISLIKE
+  AVOID
+}
+
+enum CustomerTagType {
+  NEW_CUSTOMER
+  VIP
+  ALLERGY_ALERT
+  VEGETARIAN
+  VEGAN
+  HIGH_PROTEIN
+  WEIGHT_LOSS
+}
+
+model CustomerProfile {
+  id                     String   @id @default(cuid())
+  firstName              String
+  lastName               String
+  address                String?
+  latitude               Float?
+  longitude              Float?
+  preferredDeliveryStart String? // e.g. "12:00"
+  preferredDeliveryEnd   String? // e.g. "14:00"
+  suggestions            String?
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  preferences    CustomerPreference[]
+  allergies      CustomerAllergy[]
+  tags           CustomerProfileTag[]
+  subscriptions  Subscription[]
+  mealSelections CustomerMealSelection[]
+  deliveries     Delivery[]
+  ratings        Rating[]
+
+  @@map("customer_profile")
+}
+
+// General food preferences, distinct from allergies and meal-specific requests.
+model CustomerPreference {
+  id        String         @id @default(cuid())
+  type      PreferenceType
+  label     String // e.g. "spicy food", "vegetables", "onions"
+  createdAt DateTime       @default(now())
+
+  customerProfileId String
+  customerProfile   CustomerProfile @relation(fields: [customerProfileId], references: [id], onDelete: Cascade)
+
+  @@map("customer_preference")
+}
+
+model Allergy {
+  id   String @id @default(cuid())
+  name String @unique // Nuts, Lactose, Gluten, ...
+
+  customers CustomerAllergy[]
+
+  @@map("allergy")
+}
+
+model CustomerAllergy {
+  id    String  @id @default(cuid())
+  notes String?
+
+  customerProfileId String
+  customerProfile   CustomerProfile @relation(fields: [customerProfileId], references: [id], onDelete: Cascade)
+  allergyId         String
+  allergy           Allergy         @relation(fields: [allergyId], references: [id], onDelete: Cascade)
+
+  @@unique([customerProfileId, allergyId])
+  @@map("customer_allergy")
+}
+
+model CustomerProfileTag {
+  id         String          @id @default(cuid())
+  tag        CustomerTagType
+  assignedAt DateTime        @default(now())
+
+  customerProfileId String
+  customerProfile   CustomerProfile @relation(fields: [customerProfileId], references: [id], onDelete: Cascade)
+
+  @@unique([customerProfileId, tag])
+  @@map("customer_profile_tag")
+}
+
+// ---------------------------------------------------------------------------
+// Subscriptions & payments
+// ---------------------------------------------------------------------------
+
+enum SubscriptionPlanType {
+  WEEKLY
+  MONTHLY
+  LUNCH_ONLY
+  LUNCH_AND_DINNER
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  PAUSED
+  EXPIRED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
+
+model SubscriptionPlan {
+  id           String               @id @default(cuid())
+  name         String               @unique
+  type         SubscriptionPlanType
+  mealsPerWeek Int
+  durationDays Int
+  price        Decimal              @db.Decimal(10, 2)
+  isActive     Boolean              @default(true)
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
+
+  subscriptions Subscription[]
+
+  @@map("subscription_plan")
+}
+
+model Subscription {
+  id             String             @id @default(cuid())
+  status         SubscriptionStatus @default(ACTIVE)
+  startDate      DateTime
+  endDate        DateTime
+  remainingMeals Int
+  autoRenew      Boolean            @default(false)
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  customerProfileId String
+  customerProfile   CustomerProfile  @relation(fields: [customerProfileId], references: [id], onDelete: Cascade)
+  planId            String
+  plan              SubscriptionPlan @relation(fields: [planId], references: [id])
+
+  payments Payment[]
+
+  @@map("subscription")
+}
+
+model Payment {
+  id        String        @id @default(cuid())
+  amount    Decimal       @db.Decimal(10, 2)
+  currency  String        @default("MAD")
+  method    String?
+  status    PaymentStatus @default(PENDING)
+  paidAt    DateTime?
+  createdAt DateTime      @default(now())
+
+  subscriptionId String
+  subscription   Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
+  @@map("payment")
+}
+
+// ---------------------------------------------------------------------------
+// Meals & recipes
+// ---------------------------------------------------------------------------
+
+model Meal {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  photoUrl    String?
+  category    String? // e.g. Bowl, Salad, Soup
+  calories    Int?
+  protein     Float?
+  carbs       Float?
+  fat         Float?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  recipe    Recipe?
+  menuItems MenuItem[]
+  ratings   Rating[]
+
+  @@map("meal")
+}
+
+model Ingredient {
+  id   String @id @default(cuid())
+  name String @unique
+  unit String // kg, liter, piece, ...
+
+  recipeIngredients RecipeIngredient[]
+
+  @@map("ingredient")
+}
+
+model Recipe {
+  id           String  @id @default(cuid())
+  instructions String?
+
+  mealId String @unique
+  meal   Meal   @relation(fields: [mealId], references: [id], onDelete: Cascade)
+
+  ingredients RecipeIngredient[]
+
+  @@map("recipe")
+}
+
+model RecipeIngredient {
+  id       String @id @default(cuid())
+  quantity Float
+  unit     String
+
+  recipeId     String
+  recipe       Recipe     @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  ingredientId String
+  ingredient   Ingredient @relation(fields: [ingredientId], references: [id])
+
+  @@unique([recipeId, ingredientId])
+  @@map("recipe_ingredient")
+}
+
+// ---------------------------------------------------------------------------
+// Weekly menus & personalization
+// ---------------------------------------------------------------------------
+
+enum DayOfWeek {
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+  SUNDAY
+}
+
+enum MealSlot {
+  LUNCH
+  DINNER
+}
+
+enum WeeklyMenuStatus {
+  DRAFT
+  PUBLISHED
+  LOCKED
+}
+
+enum SelectionSource {
+  RECOMMENDED
+  CUSTOM
+}
+
+model WeeklyMenu {
+  id                String           @id @default(cuid())
+  weekStartDate     DateTime
+  weekEndDate       DateTime
+  status            WeeklyMenuStatus @default(DRAFT)
+  selectionDeadline DateTime
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  menuItems      MenuItem[]
+  mealSelections CustomerMealSelection[]
+
+  @@unique([weekStartDate])
+  @@map("weekly_menu")
+}
+
+model MenuItem {
+  id            String    @id @default(cuid())
+  dayOfWeek     DayOfWeek
+  mealSlot      MealSlot
+  isRecommended Boolean   @default(true) // part of GreenBox's suggested menu for the day
+
+  weeklyMenuId String
+  weeklyMenu   WeeklyMenu @relation(fields: [weeklyMenuId], references: [id], onDelete: Cascade)
+  mealId       String
+  meal         Meal       @relation(fields: [mealId], references: [id])
+
+  selections CustomerMealSelection[]
+
+  @@unique([weeklyMenuId, dayOfWeek, mealSlot, mealId])
+  @@map("menu_item")
+}
+
+model CustomerMealSelection {
+  id          String          @id @default(cuid())
+  source      SelectionSource @default(RECOMMENDED)
+  isLocked    Boolean         @default(false)
+  confirmedAt DateTime?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  customerProfileId String
+  customerProfile   CustomerProfile @relation(fields: [customerProfileId], references: [id], onDelete: Cascade)
+  weeklyMenuId      String
+  weeklyMenu        WeeklyMenu      @relation(fields: [weeklyMenuId], references: [id], onDelete: Cascade)
+  menuItemId        String
+  menuItem          MenuItem        @relation(fields: [menuItemId], references: [id])
+
+  customizations MealCustomizationRequest[]
+  delivery       Delivery?
+  rating         Rating?
+
+  @@unique([customerProfileId, weeklyMenuId, menuItemId])
+  @@map("customer_meal_selection")
+}
+
+// Meal-specific requests, linked only to the selected meal (e.g. "more salt", "no onions").
+model MealCustomizationRequest {
+  id        String   @id @default(cuid())
+  note      String
+  createdAt DateTime @default(now())
+
+  customerMealSelectionId String
+  customerMealSelection   CustomerMealSelection @relation(fields: [customerMealSelectionId], references: [id], onDelete: Cascade)
+
+  @@map("meal_customization_request")
+}
+
+// ---------------------------------------------------------------------------
+// Delivery
+// ---------------------------------------------------------------------------
+
+enum DeliveryStatus {
+  PENDING
+  PREPARING
+  READY
+  ON_THE_WAY
+  DELIVERED
+  FAILED
+}
+
+model Driver {
+  id          String   @id @default(cuid())
+  vehicleInfo String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  deliveries Delivery[]
+
+  @@map("driver")
+}
+
+model Delivery {
+  id                 String         @id @default(cuid())
+  scheduledDate      DateTime
+  mealSlot           MealSlot
+  status             DeliveryStatus @default(PENDING)
+  addressSnapshot    String
+  latitude           Float?
+  longitude          Float?
+  preferredTimeStart String?
+  preferredTimeEnd   String?
+  deliveredAt        DateTime?
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+
+  customerMealSelectionId String                @unique
+  customerMealSelection   CustomerMealSelection @relation(fields: [customerMealSelectionId], references: [id], onDelete: Cascade)
+  customerProfileId       String
+  customerProfile         CustomerProfile       @relation(fields: [customerProfileId], references: [id])
+  driverId                String?
+  driver                  Driver?               @relation(fields: [driverId], references: [id])
+
+  @@map("delivery")
+}
+
+// ---------------------------------------------------------------------------
+// Ratings
+// ---------------------------------------------------------------------------
+
+model Rating {
+  id        String   @id @default(cuid())
+  score     Int
+  comment   String?
+  createdAt DateTime @default(now())
+
+  customerProfileId       String
+  customerProfile         CustomerProfile        @relation(fields: [customerProfileId], references: [id], onDelete: Cascade)
+  mealId                  String
+  meal                    Meal                   @relation(fields: [mealId], references: [id])
+  customerMealSelectionId String?                @unique
+  customerMealSelection   CustomerMealSelection? @relation(fields: [customerMealSelectionId], references: [id])
+
+  @@map("rating")
+}
+
+// ---------------------------------------------------------------------------
+// Notifications (architecture ready for push / WhatsApp / email)
+// ---------------------------------------------------------------------------
+
+enum NotificationType {
+  SUBSCRIPTION_CONFIRMATION
+  PAYMENT_CONFIRMATION
+  MENU_AVAILABLE
+  MENU_DEADLINE_REMINDER
+  PREPARATION_REMINDER
+  DELIVERY_UPDATE
+  ENJOY_YOUR_MEAL
+  RATING_REQUEST
+  SUBSCRIPTION_EXPIRATION
+}
+
+enum NotificationChannel {
+  IN_APP
+  PUSH
+  WHATSAPP
+  EMAIL
+}
+
+enum NotificationStatus {
+  PENDING
+  SENT
+  FAILED
+  READ
+}
+
+model Notification {
+  id        String              @id @default(cuid())
+  type      NotificationType
+  channel   NotificationChannel @default(IN_APP)
+  status    NotificationStatus  @default(PENDING)
+  title     String
+  body      String?
+  metadata  Json?
+  sentAt    DateTime?
+  readAt    DateTime?
+  createdAt DateTime            @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notification")
+}
