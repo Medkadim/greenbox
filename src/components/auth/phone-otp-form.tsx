@@ -8,6 +8,7 @@ import { toast } from "sonner";
 
 import { authClient } from "@/lib/auth-client";
 import { phoneSchema, otpSchema, type PhoneInput, type OtpInput } from "@/lib/validations/auth";
+import { ROLE_HOME, type Role } from "@/lib/rbac";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -46,7 +47,7 @@ export function PhoneOtpForm({ mode }: { mode: "login" | "register" }) {
 
   async function onVerifyOtp(values: OtpInput) {
     setLoading(true);
-    const { error } = await authClient.phoneNumber.verify({
+    const { data, error } = await authClient.phoneNumber.verify({
       phoneNumber: values.phoneNumber,
       code: values.code,
     });
@@ -57,7 +58,8 @@ export function PhoneOtpForm({ mode }: { mode: "login" | "register" }) {
       return;
     }
 
-    router.push("/dashboard");
+    const role = (data?.user as { role?: Role } | undefined)?.role ?? "CUSTOMER";
+    router.push(ROLE_HOME[role]);
     router.refresh();
   }
 

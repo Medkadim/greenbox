@@ -3,6 +3,8 @@ import { Leaf } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { SignOutButton } from "@/components/layout/sign-out-button";
+import { RoleNav } from "@/components/layout/role-nav";
+import { NAV_ITEMS } from "@/lib/nav-config";
 import type { Role } from "@/lib/rbac";
 
 const ROLE_LABEL: Record<Role, string> = {
@@ -40,6 +42,7 @@ export function AppShell({
           </div>
         </div>
       </header>
+      <RoleNav items={NAV_ITEMS[role]} />
       <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6">
         {children}
       </main>
