@@ -12,7 +12,9 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { getCustomerProfileByUserId } from "@/lib/data/customer";
 import { getCurrentSubscriptionForCustomer } from "@/lib/data/subscription";
+import { getCurrentPublishedMenu } from "@/lib/data/weekly-menu";
 import { getServerSession } from "@/lib/session";
+import { dayOfWeekFromDate, SLOT_LABEL } from "@/lib/weekly-menu-constants";
 
 export default async function CustomerDashboardPage() {
   const session = await getServerSession();
@@ -20,6 +22,10 @@ export default async function CustomerDashboardPage() {
   const subscription = profile
     ? await getCurrentSubscriptionForCustomer(profile.id)
     : null;
+  const menu = await getCurrentPublishedMenu();
+  const today = dayOfWeekFromDate(new Date());
+  const todaysMeals =
+    menu?.menuItems.filter((item) => item.dayOfWeek === today) ?? [];
 
   return (
     <div className="space-y-6">
@@ -57,11 +63,32 @@ export default async function CustomerDashboardPage() {
             <CardDescription>Lunch &amp; dinner</CardDescription>
           </CardHeader>
           <CardContent>
-            <EmptyState
-              icon={CalendarDays}
-              title="No meal selected yet"
-              description="Available once the weekly menu module ships."
-            />
+            {todaysMeals.length > 0 ? (
+              <div className="space-y-2">
+                {todaysMeals.map((item) => (
+                  <p key={item.id} className="text-sm">
+                    <span className="text-muted-foreground">
+                      {SLOT_LABEL[item.mealSlot]}:{" "}
+                    </span>
+                    {item.meal.name}
+                  </p>
+                ))}
+                <Button asChild size="sm" variant="outline">
+                  <Link href="/dashboard/menu">View week</Link>
+                </Button>
+              </div>
+            ) : (
+              <EmptyState
+                icon={CalendarDays}
+                title="No meal set for today"
+                description="Available once the weekly menu is published."
+                action={
+                  <Button asChild size="sm" variant="outline">
+                    <Link href="/dashboard/menu">View weekly menu</Link>
+                  </Button>
+                }
+              />
+            )}
           </CardContent>
         </Card>
         <Card>
