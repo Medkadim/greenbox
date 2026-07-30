@@ -13,8 +13,13 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { getCustomerProfileByUserId } from "@/lib/data/customer";
 import { getCurrentSubscriptionForCustomer } from "@/lib/data/subscription";
 import { getCurrentPublishedMenu } from "@/lib/data/weekly-menu";
+import { getCustomerSelectionsForMenu } from "@/lib/data/menu-selection";
 import { getServerSession } from "@/lib/session";
-import { dayOfWeekFromDate, SLOT_LABEL } from "@/lib/weekly-menu-constants";
+import {
+  MEAL_SLOTS,
+  dayOfWeekFromDate,
+  SLOT_LABEL,
+} from "@/lib/weekly-menu-constants";
 
 export default async function CustomerDashboardPage() {
   const session = await getServerSession();
@@ -23,9 +28,22 @@ export default async function CustomerDashboardPage() {
     ? await getCurrentSubscriptionForCustomer(profile.id)
     : null;
   const menu = await getCurrentPublishedMenu();
+  const selections =
+    profile && menu ? await getCustomerSelectionsForMenu(profile.id, menu.id) : [];
   const today = dayOfWeekFromDate(new Date());
-  const todaysMeals =
-    menu?.menuItems.filter((item) => item.dayOfWeek === today) ?? [];
+
+  const todaysMeals = MEAL_SLOTS.flatMap((slot) => {
+    const selection = selections.find(
+      (s) => s.menuItem.dayOfWeek === today && s.menuItem.mealSlot === slot
+    );
+    if (selection) {
+      return [{ slot, mealName: selection.menuItem.meal.name }];
+    }
+    const recommended = menu?.menuItems.find(
+      (item) => item.dayOfWeek === today && item.mealSlot === slot && item.isRecommended
+    );
+    return recommended ? [{ slot, mealName: recommended.meal.name }] : [];
+  });
 
   return (
     <div className="space-y-6">
@@ -66,11 +84,11 @@ export default async function CustomerDashboardPage() {
             {todaysMeals.length > 0 ? (
               <div className="space-y-2">
                 {todaysMeals.map((item) => (
-                  <p key={item.id} className="text-sm">
+                  <p key={item.slot} className="text-sm">
                     <span className="text-muted-foreground">
-                      {SLOT_LABEL[item.mealSlot]}:{" "}
+                      {SLOT_LABEL[item.slot]}:{" "}
                     </span>
-                    {item.meal.name}
+                    {item.mealName}
                   </p>
                 ))}
                 <Button asChild size="sm" variant="outline">
