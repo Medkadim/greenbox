@@ -17,3 +17,13 @@ export async function requireAdmin() {
   }
   return session;
 }
+
+export async function requireDeliveryStaff() {
+  const session = await getServerSession();
+  if (!session) throw new Error("Not authenticated");
+  const role = getUserRole(session.user);
+  if (role !== "ADMIN" && role !== "DELIVERY_DRIVER") {
+    throw new Error("Delivery team access required");
+  }
+  return session;
+}
