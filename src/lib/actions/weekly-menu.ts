@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { db } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth-guards";
+import { notifyActiveSubscribers } from "@/lib/notifications";
 import {
   weeklyMenuSchema,
   setMenuItemSchema,
@@ -66,9 +67,15 @@ export async function removeMenuItem(menuItemId: string, weeklyMenuId: string) {
 export async function publishWeeklyMenu(weeklyMenuId: string) {
   await requireAdmin();
 
-  await db.weeklyMenu.update({
+  const menu = await db.weeklyMenu.update({
     where: { id: weeklyMenuId },
     data: { status: "PUBLISHED" },
+  });
+
+  await notifyActiveSubscribers({
+    type: "MENU_AVAILABLE",
+    title: "This week's menu is up",
+    body: `Choose your meals for ${menu.weekStartDate.toLocaleDateString()} – ${menu.weekEndDate.toLocaleDateString()} before the deadline.`,
   });
 
   revalidatePath(`/admin/menus/${weeklyMenuId}`);

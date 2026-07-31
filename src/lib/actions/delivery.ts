@@ -4,11 +4,18 @@ import { revalidatePath } from "next/cache";
 
 import { db } from "@/lib/db";
 import { requireDeliveryStaff } from "@/lib/auth-guards";
+import { createNotification } from "@/lib/notifications";
 import {
   updateDeliveryStatusSchema,
   type UpdateDeliveryStatusInput,
 } from "@/lib/validations/delivery";
 import { dayOfWeekFromDate, MEAL_SLOTS } from "@/lib/weekly-menu-constants";
+
+const STATUS_MESSAGE: Partial<Record<UpdateDeliveryStatusInput["status"], string>> = {
+  PREPARING: "Your meal is being prepared.",
+  READY: "Your meal is ready and will be on its way shortly.",
+  ON_THE_WAY: "Your delivery is on its way.",
+};
 
 export async function generateTodayDeliveries() {
   await requireDeliveryStaff();
@@ -88,13 +95,39 @@ export async function updateDeliveryStatus(input: UpdateDeliveryStatusInput) {
   await requireDeliveryStaff();
   const data = updateDeliveryStatusSchema.parse(input);
 
-  await db.delivery.update({
+  const delivery = await db.delivery.update({
     where: { id: data.deliveryId },
     data: {
       status: data.status,
       deliveredAt: data.status === "DELIVERED" ? new Date() : undefined,
     },
+    include: { customerProfile: { select: { userId: true } } },
   });
+
+  const userId = delivery.customerProfile.userId;
+  const statusMessage = STATUS_MESSAGE[data.status];
+  if (statusMessage) {
+    await createNotification({
+      userId,
+      type: "DELIVERY_UPDATE",
+      title: "Delivery update",
+      body: statusMessage,
+    });
+  }
+  if (data.status === "DELIVERED") {
+    await createNotification({
+      userId,
+      type: "ENJOY_YOUR_MEAL",
+      title: "Enjoy your meal!",
+      body: "Your GreenBox meal has been delivered.",
+    });
+    await createNotification({
+      userId,
+      type: "RATING_REQUEST",
+      title: "How was it?",
+      body: "Let us know what you thought of today's meal.",
+    });
+  }
 
   revalidatePath("/delivery");
 }

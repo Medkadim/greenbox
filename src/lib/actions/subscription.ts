@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { requireCustomerId, requireAdmin } from "@/lib/auth-guards";
 import { getServerSession, getUserRole } from "@/lib/session";
+import { createNotification } from "@/lib/notifications";
 import {
   subscriptionPlanSchema,
   type SubscriptionPlanInput,
@@ -112,6 +113,19 @@ export async function subscribeToPlan(planId: string) {
     },
   });
 
+  await createNotification({
+    userId,
+    type: "SUBSCRIPTION_CONFIRMATION",
+    title: "Subscription confirmed",
+    body: `You're subscribed to ${plan.name}.`,
+  });
+  await createNotification({
+    userId,
+    type: "PAYMENT_CONFIRMATION",
+    title: "Payment received",
+    body: `${Number(plan.price).toFixed(2)} MAD for ${plan.name}.`,
+  });
+
   revalidatePath("/dashboard/subscription");
   revalidatePath("/dashboard");
   revalidatePath("/admin/subscriptions");
@@ -159,6 +173,13 @@ export async function renewSubscription(subscriptionId: string) {
       method: "manual",
       paidAt: new Date(),
     },
+  });
+
+  await createNotification({
+    userId: subscription.customerProfile.userId,
+    type: "PAYMENT_CONFIRMATION",
+    title: "Subscription renewed",
+    body: `${Number(subscription.plan.price).toFixed(2)} MAD for ${subscription.plan.name}.`,
   });
 
   revalidatePath("/dashboard/subscription");
