@@ -6,6 +6,7 @@ export const NAV_ITEMS: Record<Role, { label: string; href: string }[]> = {
     { label: "Weekly menu", href: "/dashboard/menu" },
     { label: "Subscription", href: "/dashboard/subscription" },
     { label: "Notifications", href: "/dashboard/notifications" },
+    { label: "Ratings", href: "/dashboard/ratings" },
     { label: "Profile", href: "/dashboard/profile" },
   ],
   KITCHEN_CHEF: [

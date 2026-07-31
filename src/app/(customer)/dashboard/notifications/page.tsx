@@ -36,6 +36,7 @@ export default async function NotificationsPage() {
             <NotificationItem
               key={notification.id}
               id={notification.id}
+              type={notification.type}
               title={notification.title}
               body={notification.body}
               createdAt={notification.createdAt}

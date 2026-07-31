@@ -2,6 +2,7 @@
 
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 import { markNotificationRead } from "@/lib/actions/notification";
 import { Badge } from "@/components/ui/badge";
@@ -10,12 +11,14 @@ import { Card, CardContent } from "@/components/ui/card";
 
 export function NotificationItem({
   id,
+  type,
   title,
   body,
   createdAt,
   isRead,
 }: {
   id: string;
+  type: string;
   title: string;
   body: string | null;
   createdAt: Date;
@@ -37,21 +40,28 @@ export function NotificationItem({
             {createdAt.toLocaleString()}
           </p>
         </div>
-        {!isRead && (
-          <Button
-            size="sm"
-            variant="ghost"
-            disabled={isPending}
-            onClick={() =>
-              startTransition(async () => {
-                await markNotificationRead(id);
-                router.refresh();
-              })
-            }
-          >
-            Mark read
-          </Button>
-        )}
+        <div className="flex shrink-0 items-center gap-2">
+          {type === "RATING_REQUEST" && (
+            <Button size="sm" variant="outline" asChild>
+              <Link href="/dashboard/ratings">Rate now</Link>
+            </Button>
+          )}
+          {!isRead && (
+            <Button
+              size="sm"
+              variant="ghost"
+              disabled={isPending}
+              onClick={() =>
+                startTransition(async () => {
+                  await markNotificationRead(id);
+                  router.refresh();
+                })
+              }
+            >
+              Mark read
+            </Button>
+          )}
+        </div>
       </CardContent>
     </Card>
   );
