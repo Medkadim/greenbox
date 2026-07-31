@@ -6,10 +6,10 @@ export default async function DeliveryLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { session } = await requireRole("DELIVERY_DRIVER");
+  const { session, role } = await requireRole("DELIVERY_DRIVER");
 
   return (
-    <AppShell role="DELIVERY_DRIVER" userName={session.user.name}>
+    <AppShell role={role} userName={session.user.name}>
       {children}
     </AppShell>
   );

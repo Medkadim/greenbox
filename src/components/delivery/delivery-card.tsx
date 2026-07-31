@@ -6,10 +6,21 @@ import { Navigation, Phone } from "lucide-react";
 import { toast } from "sonner";
 
 import { updateDeliveryStatus } from "@/lib/actions/delivery";
+import { assignDelivery } from "@/lib/actions/driver";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import type { DeliveryStatus } from "@/generated/prisma/client";
+
+const UNASSIGNED = "__unassigned__";
 
 const STATUS_LABEL: Record<DeliveryStatus, string> = {
   PENDING: "Pending",
@@ -52,6 +63,7 @@ export function DeliveryCard({
   preferredTimeEnd,
   mealName,
   status,
+  driverAssignment,
 }: {
   deliveryId: string;
   customerName: string;
@@ -63,6 +75,10 @@ export function DeliveryCard({
   preferredTimeEnd: string | null;
   mealName: string;
   status: DeliveryStatus;
+  driverAssignment?: {
+    drivers: { id: string; name: string }[];
+    currentDriverId: string | null;
+  };
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -81,6 +97,17 @@ export function DeliveryCard({
         router.refresh();
       } catch {
         toast.error("Could not update the delivery.");
+      }
+    });
+  }
+
+  function onAssign(value: string) {
+    startTransition(async () => {
+      try {
+        await assignDelivery(deliveryId, value === UNASSIGNED ? null : value);
+        router.refresh();
+      } catch {
+        toast.error("Could not assign the driver.");
       }
     });
   }
@@ -104,6 +131,29 @@ export function DeliveryCard({
             </p>
           )}
         </div>
+
+        {driverAssignment && (
+          <div className="space-y-1">
+            <Label className="text-muted-foreground text-xs">Driver</Label>
+            <Select
+              value={driverAssignment.currentDriverId ?? UNASSIGNED}
+              onValueChange={onAssign}
+              disabled={isPending}
+            >
+              <SelectTrigger className="h-8 w-full text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={UNASSIGNED}>Unassigned</SelectItem>
+                {driverAssignment.drivers.map((driver) => (
+                  <SelectItem key={driver.id} value={driver.id}>
+                    {driver.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
 
         <div className="flex flex-wrap gap-2">
           <Button asChild variant="outline" size="sm">

@@ -16,7 +16,7 @@ export function RoleNav({
 
   return (
     <nav className="bg-background border-b">
-      <div className="mx-auto flex max-w-6xl gap-1 px-4">
+      <div className="mx-auto flex max-w-6xl gap-1 overflow-x-auto px-4">
         {items.map((item) => {
           const isActive =
             item.href === pathname ||
@@ -29,7 +29,7 @@ export function RoleNav({
               key={item.href}
               href={item.href}
               className={cn(
-                "border-b-2 px-3 py-2.5 text-sm font-medium transition-colors",
+                "shrink-0 border-b-2 px-3 py-2.5 text-sm font-medium whitespace-nowrap transition-colors",
                 isActive
                   ? "border-primary text-foreground"
                   : "text-muted-foreground border-transparent hover:text-foreground"

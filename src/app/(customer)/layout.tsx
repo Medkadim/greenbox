@@ -6,10 +6,10 @@ export default async function CustomerLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { session } = await requireRole("CUSTOMER");
+  const { session, role } = await requireRole("CUSTOMER");
 
   return (
-    <AppShell role="CUSTOMER" userName={session.user.name}>
+    <AppShell role={role} userName={session.user.name}>
       {children}
     </AppShell>
   );

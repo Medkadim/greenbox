@@ -18,7 +18,10 @@ export const NAV_ITEMS: Record<Role, { label: string; href: string }[]> = {
     { label: "Meals", href: "/admin/meals" },
     { label: "Menus", href: "/admin/menus" },
     { label: "Kitchen", href: "/admin/kitchen" },
+    { label: "Deliveries", href: "/delivery" },
+    { label: "Drivers", href: "/admin/drivers" },
     { label: "Plans", href: "/admin/plans" },
     { label: "Subscriptions", href: "/admin/subscriptions" },
+    { label: "Finance", href: "/admin/finance" },
   ],
 };

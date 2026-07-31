@@ -6,10 +6,10 @@ export default async function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { session } = await requireRole("ADMIN");
+  const { session, role } = await requireRole("ADMIN");
 
   return (
-    <AppShell role="ADMIN" userName={session.user.name}>
+    <AppShell role={role} userName={session.user.name}>
       {children}
     </AppShell>
   );

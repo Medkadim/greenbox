@@ -6,10 +6,10 @@ export default async function KitchenLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { session } = await requireRole("KITCHEN_CHEF");
+  const { session, role } = await requireRole("KITCHEN_CHEF");
 
   return (
-    <AppShell role="KITCHEN_CHEF" userName={session.user.name}>
+    <AppShell role={role} userName={session.user.name}>
       {children}
     </AppShell>
   );
