@@ -7,13 +7,17 @@ export const NAV_ITEMS: Record<Role, { label: string; href: string }[]> = {
     { label: "Subscription", href: "/dashboard/subscription" },
     { label: "Profile", href: "/dashboard/profile" },
   ],
-  KITCHEN_CHEF: [{ label: "Production", href: "/kitchen" }],
+  KITCHEN_CHEF: [
+    { label: "Production", href: "/kitchen" },
+    { label: "Ingredients", href: "/kitchen/ingredients" },
+  ],
   DELIVERY_DRIVER: [{ label: "Deliveries", href: "/delivery" }],
   ADMIN: [
     { label: "Overview", href: "/admin" },
     { label: "Customers", href: "/admin/customers" },
     { label: "Meals", href: "/admin/meals" },
     { label: "Menus", href: "/admin/menus" },
+    { label: "Kitchen", href: "/admin/kitchen" },
     { label: "Plans", href: "/admin/plans" },
     { label: "Subscriptions", href: "/admin/subscriptions" },
   ],
