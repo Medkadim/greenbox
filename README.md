@@ -111,20 +111,20 @@ or via `npx shadcn@latest add <component>` where network access allows it.
 Built module by module, in this order:
 
 1. ✅ Project setup
-2. ✅ Authentication (phone OTP scaffold)
+2. ✅ Authentication (phone OTP)
 3. ✅ Database schema
-4. ✅ User roles & permissions (RBAC scaffold)
-5. ⬜ Customer management
-6. ⬜ Subscription system
-7. ⬜ Meal management
-8. ⬜ Weekly menus
-9. ⬜ Personalized menus
-10. ⬜ Kitchen dashboard
-11. ⬜ Ingredient preparation list
-12. ⬜ Delivery dashboard
-13. ⬜ Admin dashboard
-14. ⬜ Notifications
-15. ⬜ Analytics
+4. ✅ User roles & permissions (RBAC)
+5. ✅ Customer management
+6. ✅ Subscription system
+7. ✅ Meal management
+8. ✅ Weekly menus
+9. ✅ Personalized menus
+10. ✅ Kitchen dashboard
+11. ✅ Ingredient preparation list
+12. ✅ Delivery dashboard
+13. ✅ Admin dashboard
+14. ✅ Notifications
+15. ✅ Analytics
 
 Each subsequent module adds real data + interactions on top of the current
 scaffold's empty states, following the schema and RBAC boundaries defined
