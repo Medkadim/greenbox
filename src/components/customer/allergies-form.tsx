@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
 type Allergy = { id: string; name: string };
 type ExistingAllergy = { allergyId: string; notes: string | null };
@@ -16,9 +17,11 @@ type ExistingAllergy = { allergyId: string; notes: string | null };
 export function AllergiesForm({
   allergies,
   existing,
+  otherAllergies,
 }: {
   allergies: Allergy[];
   existing: ExistingAllergy[];
+  otherAllergies?: string | null;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -36,6 +39,7 @@ export function AllergiesForm({
   const [state, setState] = useState<
     Record<string, { checked: boolean; notes: string }>
   >(initial);
+  const [other, setOther] = useState(otherAllergies ?? "");
 
   function onSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -47,6 +51,7 @@ export function AllergiesForm({
             checked: state[allergy.id]?.checked ?? false,
             notes: state[allergy.id]?.notes ?? "",
           })),
+          otherAllergies: other,
         });
         toast.success("Allergies updated.");
         router.refresh();
@@ -94,6 +99,16 @@ export function AllergiesForm({
           </div>
         </div>
       ))}
+      <div className="space-y-1 pt-1">
+        <Label htmlFor="other-allergies">Other allergies (not listed above)</Label>
+        <Textarea
+          id="other-allergies"
+          placeholder="e.g. sesame, celery..."
+          rows={2}
+          value={other}
+          onChange={(event) => setOther(event.target.value)}
+        />
+      </div>
       <Button type="submit" disabled={isPending} size="sm">
         Save allergies
       </Button>

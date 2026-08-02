@@ -30,6 +30,7 @@ export const customerAllergiesSchema = z.object({
       notes: z.string().max(200).optional().or(z.literal("")),
     })
   ),
+  otherAllergies: z.string().max(300).optional().or(z.literal("")),
 });
 
 export type CustomerAllergiesInput = z.infer<typeof customerAllergiesSchema>;

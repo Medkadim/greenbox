@@ -68,6 +68,7 @@ export default async function CustomerProfilePage() {
                 notes: a.notes,
               })) ?? []
             }
+            otherAllergies={profile?.otherAllergies}
           />
         </CardContent>
       </Card>

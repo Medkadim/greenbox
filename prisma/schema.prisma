@@ -118,6 +118,7 @@ model CustomerProfile {
   preferredDeliveryStart String? // e.g. "12:00"
   preferredDeliveryEnd   String? // e.g. "14:00"
   suggestions            String?
+  otherAllergies         String? // free text, for allergies not in the Allergy reference list
   createdAt              DateTime @default(now())
   updatedAt              DateTime @updatedAt
 
@@ -194,6 +195,7 @@ enum SubscriptionPlanType {
 }
 
 enum SubscriptionStatus {
+  PENDING_PAYMENT
   ACTIVE
   PAUSED
   EXPIRED
@@ -225,7 +227,7 @@ model SubscriptionPlan {
 
 model Subscription {
   id             String             @id @default(cuid())
-  status         SubscriptionStatus @default(ACTIVE)
+  status         SubscriptionStatus @default(PENDING_PAYMENT)
   startDate      DateTime
   endDate        DateTime
   remainingMeals Int
@@ -493,6 +495,7 @@ model Rating {
 // ---------------------------------------------------------------------------
 
 enum NotificationType {
+  SUBSCRIPTION_PENDING
   SUBSCRIPTION_CONFIRMATION
   PAYMENT_CONFIRMATION
   MENU_AVAILABLE

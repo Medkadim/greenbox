@@ -80,7 +80,7 @@ export default async function AdminCustomerDetailPage({
           <CardTitle>Allergies</CardTitle>
         </CardHeader>
         <CardContent>
-          {customer.allergies.length === 0 ? (
+          {customer.allergies.length === 0 && !customer.otherAllergies ? (
             <p className="text-muted-foreground text-sm">None on file.</p>
           ) : (
             <div className="flex flex-wrap gap-2">
@@ -90,6 +90,9 @@ export default async function AdminCustomerDetailPage({
                   {a.notes ? ` — ${a.notes}` : ""}
                 </Badge>
               ))}
+              {customer.otherAllergies && (
+                <Badge variant="destructive">{customer.otherAllergies}</Badge>
+              )}
             </div>
           )}
         </CardContent>

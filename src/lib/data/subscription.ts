@@ -19,9 +19,12 @@ export function getCurrentSubscriptionForCustomer(customerProfileId: string) {
   return db.subscription.findFirst({
     where: {
       customerProfileId,
-      status: { in: ["ACTIVE", "PAUSED"] },
+      status: { in: ["PENDING_PAYMENT", "ACTIVE", "PAUSED"] },
     },
-    include: { plan: true },
+    include: {
+      plan: true,
+      payments: { where: { status: "PENDING" }, orderBy: { createdAt: "desc" }, take: 1 },
+    },
     orderBy: { createdAt: "desc" },
   });
 }
@@ -33,6 +36,7 @@ export function listSubscriptions() {
       customerProfile: {
         include: { user: { select: { phoneNumber: true } } },
       },
+      payments: { where: { status: "PENDING" }, orderBy: { createdAt: "desc" }, take: 1 },
     },
     orderBy: { createdAt: "desc" },
   });

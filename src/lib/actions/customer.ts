@@ -109,8 +109,8 @@ export async function updateCustomerAllergies(input: CustomerAllergiesInput) {
     select: { id: true },
   });
 
-  await db.$transaction(
-    data.allergies.map(({ allergyId, checked, notes }) =>
+  await db.$transaction([
+    ...data.allergies.map(({ allergyId, checked, notes }) =>
       checked
         ? db.customerAllergy.upsert({
             where: {
@@ -125,8 +125,12 @@ export async function updateCustomerAllergies(input: CustomerAllergiesInput) {
         : db.customerAllergy.deleteMany({
             where: { customerProfileId: profile.id, allergyId },
           })
-    )
-  );
+    ),
+    db.customerProfile.update({
+      where: { id: profile.id },
+      data: { otherAllergies: data.otherAllergies || null },
+    }),
+  ]);
 
   revalidatePath("/dashboard/profile");
 }

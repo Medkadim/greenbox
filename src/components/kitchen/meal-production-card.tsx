@@ -67,6 +67,11 @@ export function MealProductionCard({ meal }: { meal: ProductionMeal }) {
                         {allergy.notes ? ` — ${allergy.notes}` : ""}
                       </Badge>
                     ))}
+                    {customer.otherAllergies && (
+                      <Badge variant="destructive" className="text-xs">
+                        {customer.otherAllergies}
+                      </Badge>
+                    )}
                     {customer.tags.map((tag) => (
                       <Badge key={tag} variant="outline" className="text-xs">
                         {tag.replaceAll("_", " ").toLowerCase()}

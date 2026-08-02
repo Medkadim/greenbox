@@ -6,6 +6,7 @@ export type ProductionCustomer = {
   name: string;
   requests: string[];
   allergies: { name: string; notes: string | null }[];
+  otherAllergies: string | null;
   tags: string[];
 };
 
@@ -98,6 +99,7 @@ export async function getDailyProduction(): Promise<DailyProduction | null> {
           name: a.allergy.name,
           notes: a.notes,
         })),
+        otherAllergies: profile.otherAllergies,
         tags: profile.tags.map((t) => t.tag),
       };
 
@@ -119,7 +121,9 @@ export async function getDailyProduction(): Promise<DailyProduction | null> {
             unit: ri.unit,
           })) ?? [],
         customers,
-        hasAllergyAlert: customers.some((c) => c.allergies.length > 0),
+        hasAllergyAlert: customers.some(
+          (c) => c.allergies.length > 0 || Boolean(c.otherAllergies)
+        ),
       })
     );
 

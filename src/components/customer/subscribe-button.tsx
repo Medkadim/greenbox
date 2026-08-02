@@ -19,7 +19,7 @@ export function SubscribeButton({ planId }: { planId: string }) {
         startTransition(async () => {
           try {
             await subscribeToPlan(planId);
-            toast.success("Subscribed! Enjoy your GreenBox meals.");
+            toast.success("Subscription requested — awaiting payment confirmation.");
             router.refresh();
           } catch (error) {
             toast.error(

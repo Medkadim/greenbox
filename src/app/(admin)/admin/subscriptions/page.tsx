@@ -20,10 +20,15 @@ import { SubscriptionActions } from "@/components/admin/subscription-actions";
 import { listSubscriptions } from "@/lib/data/subscription";
 
 const STATUS_VARIANT: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
+  PENDING_PAYMENT: "outline",
   ACTIVE: "default",
   PAUSED: "secondary",
   EXPIRED: "outline",
   CANCELLED: "destructive",
+};
+
+const STATUS_LABEL: Record<string, string> = {
+  PENDING_PAYMENT: "awaiting payment",
 };
 
 export default async function AdminSubscriptionsPage() {
@@ -74,8 +79,14 @@ export default async function AdminSubscriptionsPage() {
                     <TableCell>{subscription.plan.name}</TableCell>
                     <TableCell>
                       <Badge variant={STATUS_VARIANT[subscription.status]}>
-                        {subscription.status.toLowerCase()}
+                        {STATUS_LABEL[subscription.status] ??
+                          subscription.status.toLowerCase()}
                       </Badge>
+                      {subscription.payments[0] && subscription.status !== "PENDING_PAYMENT" && (
+                        <Badge variant="outline" className="ml-1">
+                          renewal pending
+                        </Badge>
+                      )}
                     </TableCell>
                     <TableCell>{subscription.remainingMeals}</TableCell>
                     <TableCell>
@@ -85,6 +96,7 @@ export default async function AdminSubscriptionsPage() {
                       <SubscriptionActions
                         subscriptionId={subscription.id}
                         status={subscription.status}
+                        pendingPaymentId={subscription.payments[0]?.id}
                       />
                     </TableCell>
                   </TableRow>

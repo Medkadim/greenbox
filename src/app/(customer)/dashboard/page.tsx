@@ -119,7 +119,9 @@ export default async function CustomerDashboardPage() {
               <div className="space-y-2">
                 <p className="font-medium">{subscription.plan.name}</p>
                 <p className="text-muted-foreground text-sm">
-                  {subscription.remainingMeals} meals remaining
+                  {subscription.status === "PENDING_PAYMENT"
+                    ? "Awaiting payment confirmation"
+                    : `${subscription.remainingMeals} meals remaining`}
                 </p>
                 <Button asChild size="sm" variant="outline">
                   <Link href="/dashboard/subscription">Manage</Link>

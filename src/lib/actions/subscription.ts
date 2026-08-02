@@ -88,14 +88,17 @@ export async function subscribeToPlan(planId: string) {
 
   const [, subscription] = await db.$transaction([
     db.subscription.updateMany({
-      where: { customerProfileId: profile.id, status: { in: ["ACTIVE", "PAUSED"] } },
+      where: {
+        customerProfileId: profile.id,
+        status: { in: ["PENDING_PAYMENT", "ACTIVE", "PAUSED"] },
+      },
       data: { status: "CANCELLED" },
     }),
     db.subscription.create({
       data: {
         customerProfileId: profile.id,
         planId: plan.id,
-        status: "ACTIVE",
+        status: "PENDING_PAYMENT",
         startDate: now,
         endDate,
         remainingMeals,
@@ -107,23 +110,78 @@ export async function subscribeToPlan(planId: string) {
     data: {
       subscriptionId: subscription.id,
       amount: plan.price,
-      status: "PAID",
+      status: "PENDING",
       method: "manual",
-      paidAt: now,
     },
   });
 
   await createNotification({
     userId,
-    type: "SUBSCRIPTION_CONFIRMATION",
-    title: "Subscription confirmed",
-    body: `You're subscribed to ${plan.name}.`,
+    type: "SUBSCRIPTION_PENDING",
+    title: "Subscription requested",
+    body: `We'll activate ${plan.name} as soon as your payment is confirmed.`,
   });
+
+  revalidatePath("/dashboard/subscription");
+  revalidatePath("/dashboard");
+  revalidatePath("/admin/subscriptions");
+}
+
+export async function confirmSubscriptionPayment(paymentId: string) {
+  await requireAdmin();
+
+  const payment = await db.payment.findUniqueOrThrow({
+    where: { id: paymentId },
+    include: {
+      subscription: {
+        include: { plan: true, customerProfile: { select: { userId: true } } },
+      },
+    },
+  });
+  if (payment.status !== "PENDING") {
+    throw new Error("This payment was already processed.");
+  }
+
+  const { subscription } = payment;
+  const { plan } = subscription;
+  const now = new Date();
+  const wasPendingActivation = subscription.status === "PENDING_PAYMENT";
+
+  await db.payment.update({
+    where: { id: paymentId },
+    data: { status: "PAID", paidAt: now },
+  });
+
+  if (wasPendingActivation) {
+    await db.subscription.update({
+      where: { id: subscription.id },
+      data: { status: "ACTIVE" },
+    });
+    await createNotification({
+      userId: subscription.customerProfile.userId,
+      type: "SUBSCRIPTION_CONFIRMATION",
+      title: "Subscription active",
+      body: `Your ${plan.name} subscription is now active.`,
+    });
+  } else {
+    const base = subscription.endDate > now ? subscription.endDate : now;
+    const newEndDate = new Date(base.getTime() + plan.durationDays * 24 * 60 * 60 * 1000);
+    const addedMeals = mealsForDuration(plan.mealsPerWeek, plan.durationDays);
+
+    await db.subscription.update({
+      where: { id: subscription.id },
+      data: {
+        endDate: newEndDate,
+        remainingMeals: subscription.remainingMeals + addedMeals,
+      },
+    });
+  }
+
   await createNotification({
-    userId,
+    userId: subscription.customerProfile.userId,
     type: "PAYMENT_CONFIRMATION",
     title: "Payment received",
-    body: `${Number(plan.price).toFixed(2)} MAD for ${plan.name}.`,
+    body: `${Number(plan.price).toFixed(2)} MAD confirmed for ${plan.name}.`,
   });
 
   revalidatePath("/dashboard/subscription");
@@ -147,39 +205,30 @@ export async function cancelSubscription(subscriptionId: string) {
 export async function renewSubscription(subscriptionId: string) {
   const subscription = await getManageableSubscription(subscriptionId);
 
-  const base = subscription.endDate > new Date() ? subscription.endDate : new Date();
-  const newEndDate = new Date(
-    base.getTime() + subscription.plan.durationDays * 24 * 60 * 60 * 1000
-  );
-  const addedMeals = mealsForDuration(
-    subscription.plan.mealsPerWeek,
-    subscription.plan.durationDays
-  );
-
-  await db.subscription.update({
-    where: { id: subscriptionId },
-    data: {
-      status: "ACTIVE",
-      endDate: newEndDate,
-      remainingMeals: subscription.remainingMeals + addedMeals,
-    },
+  const existingPending = await db.payment.findFirst({
+    where: { subscriptionId, status: "PENDING" },
   });
+  if (existingPending) {
+    throw new Error("A renewal payment is already awaiting confirmation.");
+  }
 
+  // The subscription itself isn't extended yet — confirmSubscriptionPayment
+  // applies the extension once an admin marks this payment as paid, so
+  // service is neither cut nor extended based on an unconfirmed request.
   await db.payment.create({
     data: {
       subscriptionId,
       amount: subscription.plan.price,
-      status: "PAID",
+      status: "PENDING",
       method: "manual",
-      paidAt: new Date(),
     },
   });
 
   await createNotification({
     userId: subscription.customerProfile.userId,
-    type: "PAYMENT_CONFIRMATION",
-    title: "Subscription renewed",
-    body: `${Number(subscription.plan.price).toFixed(2)} MAD for ${subscription.plan.name}.`,
+    type: "SUBSCRIPTION_PENDING",
+    title: "Renewal requested",
+    body: `We'll extend your ${subscription.plan.name} subscription once payment is confirmed.`,
   });
 
   revalidatePath("/dashboard/subscription");

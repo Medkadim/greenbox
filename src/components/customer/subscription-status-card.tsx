@@ -9,18 +9,24 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { SubscriptionStatus } from "@/generated/prisma/client";
 
+const STATUS_LABEL: Partial<Record<SubscriptionStatus, string>> = {
+  PENDING_PAYMENT: "awaiting payment",
+};
+
 export function SubscriptionStatusCard({
   subscriptionId,
   planName,
   status,
   remainingMeals,
   endDate,
+  hasPendingPayment,
 }: {
   subscriptionId: string;
   planName: string;
   status: SubscriptionStatus;
   remainingMeals: number;
   endDate: Date;
+  hasPendingPayment: boolean;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -31,11 +37,15 @@ export function SubscriptionStatusCard({
         await action(subscriptionId);
         toast.success(successMessage);
         router.refresh();
-      } catch {
-        toast.error("Could not update your subscription.");
+      } catch (error) {
+        toast.error(
+          error instanceof Error ? error.message : "Could not update your subscription."
+        );
       }
     });
   }
+
+  const isPendingActivation = status === "PENDING_PAYMENT";
 
   return (
     <div className="space-y-4">
@@ -43,26 +53,39 @@ export function SubscriptionStatusCard({
         <div>
           <p className="font-medium">{planName}</p>
           <p className="text-muted-foreground text-sm">
-            Ends {endDate.toLocaleDateString()}
+            {isPendingActivation
+              ? "Starts once payment is confirmed"
+              : `Ends ${endDate.toLocaleDateString()}`}
           </p>
         </div>
         <Badge variant={status === "ACTIVE" ? "default" : "secondary"}>
-          {status.toLowerCase()}
+          {STATUS_LABEL[status] ?? status.toLowerCase()}
         </Badge>
       </div>
-      <p className="text-sm">
-        <span className="text-muted-foreground">Remaining meals: </span>
-        {remainingMeals}
-      </p>
+      {!isPendingActivation && (
+        <p className="text-sm">
+          <span className="text-muted-foreground">Remaining meals: </span>
+          {remainingMeals}
+        </p>
+      )}
+      {hasPendingPayment && (
+        <p className="text-muted-foreground text-sm">
+          {isPendingActivation
+            ? "Awaiting payment confirmation from GreenBox."
+            : "Renewal requested — awaiting payment confirmation."}
+        </p>
+      )}
       <div className="flex gap-2">
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={isPending}
-          onClick={() => run(renewSubscription, "Subscription renewed.")}
-        >
-          Renew
-        </Button>
+        {!isPendingActivation && (
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={isPending || hasPendingPayment}
+            onClick={() => run(renewSubscription, "Renewal requested.")}
+          >
+            Renew
+          </Button>
+        )}
         <Button
           variant="destructive"
           size="sm"

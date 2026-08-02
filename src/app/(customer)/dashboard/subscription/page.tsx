@@ -55,6 +55,7 @@ export default async function CustomerSubscriptionPage() {
               status={subscription.status}
               remainingMeals={subscription.remainingMeals}
               endDate={subscription.endDate}
+              hasPendingPayment={subscription.payments.length > 0}
             />
           </CardContent>
         </Card>
