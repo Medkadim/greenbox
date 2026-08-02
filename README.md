@@ -10,7 +10,7 @@ together.
 - **Frontend:** Next.js 15 (App Router), TypeScript, Tailwind CSS v4, shadcn/ui
 - **Backend:** Next.js server actions / API routes
 - **Database:** PostgreSQL via Prisma ORM (Prisma 7, driver adapter)
-- **Auth:** Better Auth, phone-number OTP as the primary sign-in method
+- **Auth:** Better Auth, email/password credentials (phone number as the identifier for customers/drivers, email for staff)
 - **Validation:** Zod
 - **Forms:** React Hook Form
 - **Data fetching/state:** TanStack Query
@@ -64,7 +64,8 @@ needed for the MVP's flat access model.
 ### Database schema (`prisma/schema.prisma`)
 
 - **Auth:** `User`, `Session`, `Account`, `Verification` (Better Auth's
-  expected shape, phone-number plugin enabled).
+  expected shape). `User.phoneNumber` doubles as the sign-in identifier for
+  customers/drivers (see Auth below).
 - **Customer:** `CustomerProfile`, `CustomerPreference` (general likes /
   dislikes, distinct from allergies), `Allergy` / `CustomerAllergy`,
   `CustomerProfileTag` (VIP, allergy alert, vegetarian, ... — architecture
@@ -91,13 +92,29 @@ connected.
 
 ### Auth
 
-Better Auth is configured for phone-number OTP sign-in
-(`src/lib/auth.ts`, `src/lib/auth-client.ts`,
-`src/components/auth/phone-otp-form.tsx`). `sendOTP` currently logs the code
-to the server console — swap it for a WhatsApp/SMS provider in the
-notifications module. Email/password is enabled as a secondary method for
-staff accounts (kitchen/delivery/admin), which won't be self-registered by
-customers.
+Better Auth's email/password credential provider (`src/lib/auth.ts`,
+`src/lib/auth-client.ts`) backs every account. `/login` and `/register`
+each show two tabs:
+
+- **Customer** (`src/components/auth/customer-auth-form.tsx`) — signs in
+  with phone number + password. The phone number is mapped to a
+  deterministic local email (`phoneToLocalEmail`, `src/lib/phone-identity.ts`)
+  since Better Auth's credential provider is keyed by email either way; the
+  real number is stored separately via the `phoneNumber` additional field.
+  Drivers use this same tab/identity — see below.
+- **Team** (`src/components/auth/staff-auth-form.tsx`) — signs in with a
+  real email + password, for `ADMIN` and `KITCHEN_CHEF`.
+
+New accounts always start as `CUSTOMER` (`role` is a non-input additional
+field, so nobody can self-elevate). To promote someone to `KITCHEN_CHEF`,
+`ADMIN`, or `DELIVERY_DRIVER`:
+- Have them create an account first (Team tab for kitchen/admin, Customer
+  tab for drivers — drivers sign in the same way customers do).
+- `KITCHEN_CHEF`/`ADMIN`: an existing admin flips the `role` field on their
+  `User` row via `npm run db:studio` (there's no self-serve admin promotion
+  UI in the MVP, by design).
+- `DELIVERY_DRIVER`: an admin promotes them from `/admin/drivers` by phone
+  number — no Prisma Studio needed for this one.
 
 ### UI
 
@@ -111,7 +128,7 @@ or via `npx shadcn@latest add <component>` where network access allows it.
 Built module by module, in this order:
 
 1. ✅ Project setup
-2. ✅ Authentication (phone OTP)
+2. ✅ Authentication (phone/email + password)
 3. ✅ Database schema
 4. ✅ User roles & permissions (RBAC)
 5. ✅ Customer management
