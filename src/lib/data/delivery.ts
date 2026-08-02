@@ -1,5 +1,25 @@
 import { db } from "@/lib/db";
 
+export function getTodayDeliveriesForCustomer(customerProfileId: string) {
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+  const todayEnd = new Date(todayStart);
+  todayEnd.setDate(todayEnd.getDate() + 1);
+
+  return db.delivery.findMany({
+    where: {
+      customerProfileId,
+      scheduledDate: { gte: todayStart, lt: todayEnd },
+    },
+    include: {
+      customerMealSelection: {
+        include: { menuItem: { include: { meal: true } } },
+      },
+    },
+    orderBy: { mealSlot: "asc" },
+  });
+}
+
 export function getTodayDeliveries() {
   const todayStart = new Date();
   todayStart.setHours(0, 0, 0, 0);

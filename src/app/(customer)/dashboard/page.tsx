@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CalendarDays, UserRound } from "lucide-react";
+import { CalendarDays, Truck, UserRound } from "lucide-react";
 
 import {
   Card,
@@ -8,18 +8,42 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { getCustomerProfileByUserId } from "@/lib/data/customer";
 import { getCurrentSubscriptionForCustomer } from "@/lib/data/subscription";
 import { getCurrentPublishedMenu } from "@/lib/data/weekly-menu";
 import { getCustomerSelectionsForMenu } from "@/lib/data/menu-selection";
+import { getTodayDeliveriesForCustomer } from "@/lib/data/delivery";
 import { getServerSession } from "@/lib/session";
 import {
   MEAL_SLOTS,
   dayOfWeekFromDate,
   SLOT_LABEL,
 } from "@/lib/weekly-menu-constants";
+import type { DeliveryStatus } from "@/generated/prisma/client";
+
+const DELIVERY_STATUS_LABEL: Record<DeliveryStatus, string> = {
+  PENDING: "Pending",
+  PREPARING: "Preparing",
+  READY: "Ready",
+  ON_THE_WAY: "On the way",
+  DELIVERED: "Delivered",
+  FAILED: "Failed",
+};
+
+const DELIVERY_STATUS_VARIANT: Record<
+  DeliveryStatus,
+  "default" | "secondary" | "outline" | "destructive"
+> = {
+  PENDING: "outline",
+  PREPARING: "secondary",
+  READY: "secondary",
+  ON_THE_WAY: "default",
+  DELIVERED: "default",
+  FAILED: "destructive",
+};
 
 export default async function CustomerDashboardPage() {
   const session = await getServerSession();
@@ -30,6 +54,7 @@ export default async function CustomerDashboardPage() {
   const menu = await getCurrentPublishedMenu();
   const selections =
     profile && menu ? await getCustomerSelectionsForMenu(profile.id, menu.id) : [];
+  const deliveries = profile ? await getTodayDeliveriesForCustomer(profile.id) : [];
   const today = dayOfWeekFromDate(new Date());
 
   const todaysMeals = MEAL_SLOTS.flatMap((slot) => {
@@ -144,14 +169,39 @@ export default async function CustomerDashboardPage() {
         <Card>
           <CardHeader>
             <CardTitle>Delivery</CardTitle>
-            <CardDescription>Next delivery information</CardDescription>
+            <CardDescription>Today&apos;s delivery status</CardDescription>
           </CardHeader>
           <CardContent>
-            <EmptyState
-              icon={CalendarDays}
-              title="Nothing scheduled"
-              description="Available once the delivery module ships."
-            />
+            {deliveries.length > 0 ? (
+              <div className="space-y-2">
+                {deliveries.map((delivery) => (
+                  <div
+                    key={delivery.id}
+                    className="flex items-center justify-between text-sm"
+                  >
+                    <span>
+                      <span className="text-muted-foreground">
+                        {SLOT_LABEL[delivery.mealSlot]}:{" "}
+                      </span>
+                      {delivery.customerMealSelection.menuItem.meal.name}
+                    </span>
+                    <Badge variant={DELIVERY_STATUS_VARIANT[delivery.status]}>
+                      {DELIVERY_STATUS_LABEL[delivery.status]}
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <EmptyState
+                icon={Truck}
+                title="Nothing scheduled"
+                description={
+                  subscription && subscription.status === "ACTIVE"
+                    ? "Deliveries appear here once the kitchen prepares today's meals."
+                    : "Available once you have an active subscription."
+                }
+              />
+            )}
           </CardContent>
         </Card>
       </div>
