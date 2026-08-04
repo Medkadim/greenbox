@@ -1,11 +1,14 @@
 import { z } from "zod";
 
-const phoneNumber = z
+export const phoneNumberSchema = z
   .string()
   .min(8, "Enter a valid phone number")
   .regex(/^\+?[0-9\s]{8,15}$/, "Use international format, e.g. +212600000000");
 
-const password = z.string().min(8, "Use at least 8 characters");
+export const passwordSchema = z.string().min(8, "Use at least 8 characters");
+
+const phoneNumber = phoneNumberSchema;
+const password = passwordSchema;
 
 export const customerSignInSchema = z.object({
   phoneNumber,

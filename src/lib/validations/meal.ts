@@ -9,8 +9,8 @@ export type IngredientInput = z.infer<typeof ingredientSchema>;
 
 export const mealSchema = z.object({
   name: z.string().min(1, "Name is required").max(150),
-  description: z.string().max(1000).optional().or(z.literal("")),
-  photoUrl: z.string().max(500).optional().or(z.literal("")),
+  description: z.string().min(1, "Description is required").max(1000),
+  photoUrl: z.string().min(1, "Photo is required").max(500),
   category: z.string().max(60).optional().or(z.literal("")),
   calories: z.coerce.number().int().min(0).max(5000).optional().nullable(),
   protein: z.coerce.number().min(0).max(500).optional().nullable(),

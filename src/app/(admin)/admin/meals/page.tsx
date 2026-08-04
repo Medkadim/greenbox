@@ -58,6 +58,7 @@ export default async function AdminMealsPage() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead></TableHead>
                   <TableHead>Name</TableHead>
                   <TableHead>Category</TableHead>
                   <TableHead>Ingredients</TableHead>
@@ -68,6 +69,18 @@ export default async function AdminMealsPage() {
               <TableBody>
                 {meals.map((meal) => (
                   <TableRow key={meal.id}>
+                    <TableCell>
+                      {meal.photoUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={meal.photoUrl}
+                          alt=""
+                          className="border-input size-10 rounded-md border object-cover"
+                        />
+                      ) : (
+                        <div className="border-input bg-muted size-10 rounded-md border" />
+                      )}
+                    </TableCell>
                     <TableCell>
                       <Link
                         href={`/admin/meals/${meal.id}`}

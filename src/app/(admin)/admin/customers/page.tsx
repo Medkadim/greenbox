@@ -17,6 +17,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { CreateCustomerForm } from "@/components/admin/create-customer-form";
 import { listCustomerProfiles } from "@/lib/data/customer";
 
 export default async function AdminCustomersPage() {
@@ -30,6 +31,15 @@ export default async function AdminCustomersPage() {
           Profiles, preferences and tags.
         </p>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Add a customer</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <CreateCustomerForm />
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

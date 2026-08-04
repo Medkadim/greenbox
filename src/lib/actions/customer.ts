@@ -2,17 +2,55 @@
 
 import { revalidatePath } from "next/cache";
 
+import { APIError } from "better-auth";
+
 import { db } from "@/lib/db";
+import { auth } from "@/lib/auth";
 import { requireCustomerId, requireAdmin } from "@/lib/auth-guards";
+import { phoneToLocalEmail } from "@/lib/phone-identity";
 import {
+  adminCreateCustomerSchema,
   customerProfileSchema,
   customerPreferenceSchema,
   customerAllergiesSchema,
+  type AdminCreateCustomerInput,
   type CustomerProfileInput,
   type CustomerPreferenceInput,
   type CustomerAllergiesInput,
 } from "@/lib/validations/customer";
 import type { CustomerTagType } from "@/generated/prisma/client";
+
+export async function adminCreateCustomer(input: AdminCreateCustomerInput) {
+  await requireAdmin();
+  const data = adminCreateCustomerSchema.parse(input);
+
+  let userId: string;
+  try {
+    const result = await auth.api.signUpEmail({
+      body: {
+        name: data.phoneNumber,
+        email: phoneToLocalEmail(data.phoneNumber),
+        password: data.password,
+        phoneNumber: data.phoneNumber,
+      },
+    });
+    userId = result.user.id;
+  } catch (error) {
+    if (error instanceof APIError && error.status === "UNPROCESSABLE_ENTITY") {
+      throw new Error("A customer with this phone number is already registered.");
+    }
+    throw new Error("Could not create the customer account.");
+  }
+
+  const profile = await db.customerProfile.create({
+    data: { userId, firstName: data.firstName, lastName: data.lastName },
+  });
+  await db.customerProfileTag.create({
+    data: { customerProfileId: profile.id, tag: "NEW_CUSTOMER" },
+  });
+
+  revalidatePath("/admin/customers");
+}
 
 function toCoordinate(value: string | number | null | undefined, min: number, max: number) {
   if (value === "" || value === null || value === undefined) return null;

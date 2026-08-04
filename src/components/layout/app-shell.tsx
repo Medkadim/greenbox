@@ -17,10 +17,12 @@ const ROLE_LABEL: Record<Role, string> = {
 export function AppShell({
   role,
   userName,
+  badgeLabel,
   children,
 }: {
   role: Role;
   userName?: string | null;
+  badgeLabel?: string | null;
   children: React.ReactNode;
 }) {
   return (
@@ -32,7 +34,7 @@ export function AppShell({
             GreenBox
           </Link>
           <div className="flex items-center gap-3">
-            <Badge variant="secondary">{ROLE_LABEL[role]}</Badge>
+            <Badge variant="secondary">{badgeLabel || ROLE_LABEL[role]}</Badge>
             {userName && (
               <span className="text-muted-foreground hidden text-sm sm:inline">
                 {userName}

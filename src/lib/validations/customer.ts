@@ -1,5 +1,16 @@
 import { z } from "zod";
 
+import { phoneNumberSchema, passwordSchema } from "@/lib/validations/auth";
+
+export const adminCreateCustomerSchema = z.object({
+  firstName: z.string().min(1, "First name is required").max(80),
+  lastName: z.string().min(1, "Last name is required").max(80),
+  phoneNumber: phoneNumberSchema,
+  password: passwordSchema,
+});
+
+export type AdminCreateCustomerInput = z.infer<typeof adminCreateCustomerSchema>;
+
 export const customerProfileSchema = z.object({
   firstName: z.string().min(1, "First name is required").max(80),
   lastName: z.string().min(1, "Last name is required").max(80),

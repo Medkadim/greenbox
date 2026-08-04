@@ -29,6 +29,9 @@ services:
       NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
     ports:
       - "3000:3000"
+    volumes:
+      - greenbox_uploads:/app/public/uploads
 
 volumes:
   greenbox_db_data:
+  greenbox_uploads:
