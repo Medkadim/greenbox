@@ -64,13 +64,23 @@ export function MealForm({ meal }: { meal?: Meal }) {
     event.target.value = "";
     if (!file) return;
 
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("File too large (max 5MB).");
+      return;
+    }
+
     setIsUploading(true);
     try {
       const body = new FormData();
       body.append("file", file);
       const response = await fetch("/api/upload", { method: "POST", body });
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.error ?? "Upload failed.");
+      let result: { url?: string; error?: string };
+      try {
+        result = await response.json();
+      } catch {
+        throw new Error("Upload failed — please try again.");
+      }
+      if (!response.ok || !result.url) throw new Error(result.error ?? "Upload failed.");
       form.setValue("photoUrl", result.url, {
         shouldValidate: true,
         shouldDirty: true,
