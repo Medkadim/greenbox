@@ -28,13 +28,13 @@ export function MealRequestManager({
   function onAdd() {
     if (!note.trim()) return;
     startTransition(async () => {
-      try {
-        await addMealRequest({ customerMealSelectionId, note });
-        setNote("");
-        router.refresh();
-      } catch {
-        toast.error("Could not add the request.");
+      const result = await addMealRequest({ customerMealSelectionId, note });
+      if (result?.error) {
+        toast.error(result.error);
+        return;
       }
+      setNote("");
+      router.refresh();
     });
   }
 

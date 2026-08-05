@@ -9,7 +9,9 @@ import {
   type CreateDriverInput,
 } from "@/lib/validations/driver";
 
-export async function createDriver(input: CreateDriverInput) {
+export async function createDriver(
+  input: CreateDriverInput
+): Promise<{ error: string } | void> {
   await requireAdmin();
   const data = createDriverSchema.parse(input);
 
@@ -17,12 +19,12 @@ export async function createDriver(input: CreateDriverInput) {
     where: { phoneNumber: data.phoneNumber },
   });
   if (!user) {
-    throw new Error(
-      "No account found for this phone number. Ask them to sign in first."
-    );
+    return {
+      error: "No account found for this phone number. Ask them to sign in first.",
+    };
   }
   if (user.role === "ADMIN") {
-    throw new Error("Cannot make an admin a driver.");
+    return { error: "Cannot make an admin a driver." };
   }
 
   await db.user.update({ where: { id: user.id }, data: { role: "DELIVERY_DRIVER" } });

@@ -21,16 +21,14 @@ export function CreateCustomerForm() {
 
   function onSubmit(values: AdminCreateCustomerInput) {
     startTransition(async () => {
-      try {
-        await adminCreateCustomer(values);
-        form.reset({ firstName: "", lastName: "", phoneNumber: "", password: "" });
-        toast.success("Customer account created.");
-        router.refresh();
-      } catch (error) {
-        toast.error(
-          error instanceof Error ? error.message : "Could not create the customer."
-        );
+      const result = await adminCreateCustomer(values);
+      if (result?.error) {
+        toast.error(result.error);
+        return;
       }
+      form.reset({ firstName: "", lastName: "", phoneNumber: "", password: "" });
+      toast.success("Customer account created.");
+      router.refresh();
     });
   }
 

@@ -20,7 +20,9 @@ import {
 } from "@/lib/validations/customer";
 import type { CustomerTagType } from "@/generated/prisma/client";
 
-export async function adminCreateCustomer(input: AdminCreateCustomerInput) {
+export async function adminCreateCustomer(
+  input: AdminCreateCustomerInput
+): Promise<{ error: string } | void> {
   await requireAdmin();
   const data = adminCreateCustomerSchema.parse(input);
 
@@ -37,9 +39,9 @@ export async function adminCreateCustomer(input: AdminCreateCustomerInput) {
     userId = result.user.id;
   } catch (error) {
     if (error instanceof APIError && error.status === "UNPROCESSABLE_ENTITY") {
-      throw new Error("A customer with this phone number is already registered.");
+      return { error: "A customer with this phone number is already registered." };
     }
-    throw new Error("Could not create the customer account.");
+    return { error: "Could not create the customer account." };
   }
 
   const profile = await db.customerProfile.create({

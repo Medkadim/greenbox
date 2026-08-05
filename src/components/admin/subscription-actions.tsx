@@ -26,14 +26,14 @@ export function SubscriptionActions({
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
-  function run(action: (id: string) => Promise<void>, id: string) {
+  function run(action: (id: string) => Promise<{ error: string } | void>, id: string) {
     startTransition(async () => {
-      try {
-        await action(id);
-        router.refresh();
-      } catch {
-        toast.error("Could not update the subscription.");
+      const result = await action(id);
+      if (result?.error) {
+        toast.error(result.error);
+        return;
       }
+      router.refresh();
     });
   }
 

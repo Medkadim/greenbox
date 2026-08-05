@@ -27,17 +27,17 @@ export function RatingForm({
       return;
     }
     startTransition(async () => {
-      try {
-        await submitRating({
-          customerMealSelectionId,
-          score,
-          comment: comment.trim() || undefined,
-        });
-        toast.success("Thanks for your feedback!");
-        router.refresh();
-      } catch {
-        toast.error("Could not submit your rating.");
+      const result = await submitRating({
+        customerMealSelectionId,
+        score,
+        comment: comment.trim() || undefined,
+      });
+      if (result?.error) {
+        toast.error(result.error);
+        return;
       }
+      toast.success("Thanks for your feedback!");
+      router.refresh();
     });
   }
 

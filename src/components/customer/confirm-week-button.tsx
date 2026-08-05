@@ -31,15 +31,13 @@ export function ConfirmWeekButton({
       disabled={disabled || !hasSelections || isPending}
       onClick={() =>
         startTransition(async () => {
-          try {
-            await confirmWeekSelections(weeklyMenuId);
-            toast.success("Your week is confirmed.");
-            router.refresh();
-          } catch (error) {
-            toast.error(
-              error instanceof Error ? error.message : "Could not confirm."
-            );
+          const result = await confirmWeekSelections(weeklyMenuId);
+          if (result?.error) {
+            toast.error(result.error);
+            return;
           }
+          toast.success("Your week is confirmed.");
+          router.refresh();
         })
       }
     >

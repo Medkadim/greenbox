@@ -21,16 +21,14 @@ export function DriverForm() {
 
   function onSubmit(values: CreateDriverInput) {
     startTransition(async () => {
-      try {
-        await createDriver(values);
-        form.reset({ phoneNumber: "", vehicleInfo: "" });
-        toast.success("Driver added.");
-        router.refresh();
-      } catch (error) {
-        toast.error(
-          error instanceof Error ? error.message : "Could not add the driver."
-        );
+      const result = await createDriver(values);
+      if (result?.error) {
+        toast.error(result.error);
+        return;
       }
+      form.reset({ phoneNumber: "", vehicleInfo: "" });
+      toast.success("Driver added.");
+      router.refresh();
     });
   }
 

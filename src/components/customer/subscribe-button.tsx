@@ -17,15 +17,13 @@ export function SubscribeButton({ planId }: { planId: string }) {
       disabled={isPending}
       onClick={() =>
         startTransition(async () => {
-          try {
-            await subscribeToPlan(planId);
-            toast.success("Subscription requested — awaiting payment confirmation.");
-            router.refresh();
-          } catch (error) {
-            toast.error(
-              error instanceof Error ? error.message : "Could not subscribe."
-            );
+          const result = await subscribeToPlan(planId);
+          if (result?.error) {
+            toast.error(result.error);
+            return;
           }
+          toast.success("Subscription requested — awaiting payment confirmation.");
+          router.refresh();
         })
       }
     >

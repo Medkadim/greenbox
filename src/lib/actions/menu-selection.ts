@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { db } from "@/lib/db";
 import { requireCustomerId } from "@/lib/auth-guards";
-import { assertMenuEditable } from "@/lib/menu-lock";
+import { getMenuEditError } from "@/lib/menu-lock";
 import {
   selectMealSchema,
   mealRequestSchema,
@@ -12,26 +12,31 @@ import {
   type MealRequestInput,
 } from "@/lib/validations/menu-selection";
 
-async function requireProfileId(userId: string) {
+type ActionResult = { error: string } | void;
+
+async function requireProfileId(userId: string): Promise<{ id: string } | { error: string }> {
   const profile = await db.customerProfile.findUnique({
     where: { userId },
     select: { id: true },
   });
   if (!profile) {
-    throw new Error("Please complete your profile before choosing meals.");
+    return { error: "Please complete your profile before choosing meals." };
   }
-  return profile.id;
+  return { id: profile.id };
 }
 
-export async function selectMeal(input: SelectMealInput) {
+export async function selectMeal(input: SelectMealInput): Promise<ActionResult> {
   const userId = await requireCustomerId();
   const data = selectMealSchema.parse(input);
-  const customerProfileId = await requireProfileId(userId);
+  const profileResult = await requireProfileId(userId);
+  if ("error" in profileResult) return profileResult;
+  const customerProfileId = profileResult.id;
 
   const weeklyMenu = await db.weeklyMenu.findUniqueOrThrow({
     where: { id: data.weeklyMenuId },
   });
-  assertMenuEditable(weeklyMenu);
+  const menuError = getMenuEditError(weeklyMenu);
+  if (menuError) return { error: menuError };
 
   const menuItem = await db.menuItem.upsert({
     where: {
@@ -73,7 +78,7 @@ export async function selectMeal(input: SelectMealInput) {
   revalidatePath("/dashboard/menu");
 }
 
-export async function addMealRequest(input: MealRequestInput) {
+export async function addMealRequest(input: MealRequestInput): Promise<ActionResult> {
   const userId = await requireCustomerId();
   const data = mealRequestSchema.parse(input);
 
@@ -84,7 +89,8 @@ export async function addMealRequest(input: MealRequestInput) {
     },
     include: { weeklyMenu: true },
   });
-  assertMenuEditable(selection.weeklyMenu);
+  const menuError = getMenuEditError(selection.weeklyMenu);
+  if (menuError) return { error: menuError };
 
   await db.mealCustomizationRequest.create({
     data: { customerMealSelectionId: selection.id, note: data.note },
@@ -106,14 +112,17 @@ export async function deleteMealRequest(requestId: string) {
   revalidatePath("/dashboard/menu");
 }
 
-export async function confirmWeekSelections(weeklyMenuId: string) {
+export async function confirmWeekSelections(weeklyMenuId: string): Promise<ActionResult> {
   const userId = await requireCustomerId();
-  const customerProfileId = await requireProfileId(userId);
+  const profileResult = await requireProfileId(userId);
+  if ("error" in profileResult) return profileResult;
+  const customerProfileId = profileResult.id;
 
   const weeklyMenu = await db.weeklyMenu.findUniqueOrThrow({
     where: { id: weeklyMenuId },
   });
-  assertMenuEditable(weeklyMenu);
+  const menuError = getMenuEditError(weeklyMenu);
+  if (menuError) return { error: menuError };
 
   await db.customerMealSelection.updateMany({
     where: { customerProfileId, weeklyMenuId },

@@ -50,14 +50,12 @@ export function MealSelectCell({
 
   function onChange(mealId: string) {
     startTransition(async () => {
-      try {
-        await selectMeal({ weeklyMenuId, dayOfWeek, mealSlot, mealId });
-        router.refresh();
-      } catch (error) {
-        toast.error(
-          error instanceof Error ? error.message : "Could not select this meal."
-        );
+      const result = await selectMeal({ weeklyMenuId, dayOfWeek, mealSlot, mealId });
+      if (result?.error) {
+        toast.error(result.error);
+        return;
       }
+      router.refresh();
     });
   }
 

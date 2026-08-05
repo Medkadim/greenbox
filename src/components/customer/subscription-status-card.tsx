@@ -31,17 +31,18 @@ export function SubscriptionStatusCard({
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
-  function run(action: (id: string) => Promise<void>, successMessage: string) {
+  function run(
+    action: (id: string) => Promise<{ error: string } | void>,
+    successMessage: string
+  ) {
     startTransition(async () => {
-      try {
-        await action(subscriptionId);
-        toast.success(successMessage);
-        router.refresh();
-      } catch (error) {
-        toast.error(
-          error instanceof Error ? error.message : "Could not update your subscription."
-        );
+      const result = await action(subscriptionId);
+      if (result?.error) {
+        toast.error(result.error);
+        return;
       }
+      toast.success(successMessage);
+      router.refresh();
     });
   }
 

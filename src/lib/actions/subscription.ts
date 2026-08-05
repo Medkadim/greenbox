@@ -66,7 +66,9 @@ export async function toggleSubscriptionPlanActive(
   revalidatePath("/dashboard/subscription");
 }
 
-export async function subscribeToPlan(planId: string) {
+type ActionResult = { error: string } | void;
+
+export async function subscribeToPlan(planId: string): Promise<ActionResult> {
   const userId = await requireCustomerId();
 
   const profile = await db.customerProfile.findUnique({
@@ -74,13 +76,13 @@ export async function subscribeToPlan(planId: string) {
     select: { id: true },
   });
   if (!profile) {
-    throw new Error("Please complete your profile before subscribing.");
+    return { error: "Please complete your profile before subscribing." };
   }
 
   const plan = await db.subscriptionPlan.findUniqueOrThrow({
     where: { id: planId },
   });
-  if (!plan.isActive) throw new Error("This plan is no longer available.");
+  if (!plan.isActive) return { error: "This plan is no longer available." };
 
   const now = new Date();
   const endDate = new Date(now.getTime() + plan.durationDays * 24 * 60 * 60 * 1000);
@@ -127,7 +129,7 @@ export async function subscribeToPlan(planId: string) {
   revalidatePath("/admin/subscriptions");
 }
 
-export async function confirmSubscriptionPayment(paymentId: string) {
+export async function confirmSubscriptionPayment(paymentId: string): Promise<ActionResult> {
   await requireAdmin();
 
   const payment = await db.payment.findUniqueOrThrow({
@@ -139,7 +141,7 @@ export async function confirmSubscriptionPayment(paymentId: string) {
     },
   });
   if (payment.status !== "PENDING") {
-    throw new Error("This payment was already processed.");
+    return { error: "This payment was already processed." };
   }
 
   const { subscription } = payment;
@@ -202,14 +204,14 @@ export async function cancelSubscription(subscriptionId: string) {
   revalidatePath("/admin/subscriptions");
 }
 
-export async function renewSubscription(subscriptionId: string) {
+export async function renewSubscription(subscriptionId: string): Promise<ActionResult> {
   const subscription = await getManageableSubscription(subscriptionId);
 
   const existingPending = await db.payment.findFirst({
     where: { subscriptionId, status: "PENDING" },
   });
   if (existingPending) {
-    throw new Error("A renewal payment is already awaiting confirmation.");
+    return { error: "A renewal payment is already awaiting confirmation." };
   }
 
   // The subscription itself isn't extended yet — confirmSubscriptionPayment
