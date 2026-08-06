@@ -20,9 +20,16 @@ ENV NODE_ENV=production
 RUN addgroup --system --gid 1001 nodejs \
   && adduser --system --uid 1001 nextjs
 
-COPY --from=builder /app/public ./public
+COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+
+# Pre-create the uploads dir owned by nextjs:nodejs — when Docker Compose
+# mounts a fresh named volume here, it copies this image content (and its
+# ownership) into the volume, so the non-root process can actually write
+# to it. Without this the volume would mount root-owned and every upload
+# would fail with a permission error.
+RUN mkdir -p public/uploads/meals && chown -R nextjs:nodejs public/uploads
 
 USER nextjs
 EXPOSE 3000
