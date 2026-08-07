@@ -7,24 +7,10 @@ export const phoneNumberSchema = z
 
 export const passwordSchema = z.string().min(8, "Use at least 8 characters");
 
-const phoneNumber = phoneNumberSchema;
-const password = passwordSchema;
-
-export const customerSignInSchema = z.object({
-  phoneNumber,
+export const driverSignInSchema = z.object({
+  phoneNumber: phoneNumberSchema,
   password: z.string().min(1, "Enter your password"),
 });
-
-export const customerSignUpSchema = z
-  .object({
-    phoneNumber,
-    password,
-    confirmPassword: z.string(),
-  })
-  .refine((data) => data.password === data.confirmPassword, {
-    message: "Passwords do not match",
-    path: ["confirmPassword"],
-  });
 
 export const staffSignInSchema = z.object({
   email: z.string().email("Enter a valid email address"),
@@ -35,7 +21,7 @@ export const staffSignUpSchema = z
   .object({
     name: z.string().min(1, "Enter your name"),
     email: z.string().email("Enter a valid email address"),
-    password,
+    password: passwordSchema,
     confirmPassword: z.string(),
   })
   .refine((data) => data.password === data.confirmPassword, {
@@ -43,7 +29,6 @@ export const staffSignUpSchema = z
     path: ["confirmPassword"],
   });
 
-export type CustomerSignInInput = z.infer<typeof customerSignInSchema>;
-export type CustomerSignUpInput = z.infer<typeof customerSignUpSchema>;
+export type DriverSignInInput = z.infer<typeof driverSignInSchema>;
 export type StaffSignInInput = z.infer<typeof staffSignInSchema>;
 export type StaffSignUpInput = z.infer<typeof staffSignUpSchema>;

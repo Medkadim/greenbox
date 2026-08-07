@@ -2,177 +2,166 @@
 
 import { revalidatePath } from "next/cache";
 
-import { APIError } from "better-auth";
-
 import { db } from "@/lib/db";
-import { auth } from "@/lib/auth";
-import { requireCustomerId, requireAdmin } from "@/lib/auth-guards";
-import { phoneToLocalEmail } from "@/lib/phone-identity";
+import { requireAdmin } from "@/lib/auth-guards";
+import { Prisma } from "@/generated/prisma/client";
 import {
-  adminCreateCustomerSchema,
   customerProfileSchema,
+  customerStatusEnum,
   customerPreferenceSchema,
   customerAllergiesSchema,
-  type AdminCreateCustomerInput,
   type CustomerProfileInput,
+  type CustomerStatusInput,
   type CustomerPreferenceInput,
   type CustomerAllergiesInput,
 } from "@/lib/validations/customer";
 import type { CustomerTagType } from "@/generated/prisma/client";
 
-export async function adminCreateCustomer(
-  input: AdminCreateCustomerInput
-): Promise<{ error: string } | void> {
-  await requireAdmin();
-  const data = adminCreateCustomerSchema.parse(input);
+function toCoordinate(value: string | number | null | undefined) {
+  if (value === "" || value === null || value === undefined) return null;
+  const num = typeof value === "number" ? value : Number(value);
+  return Number.isNaN(num) ? null : num;
+}
 
-  let userId: string;
+function profileData(data: CustomerProfileInput) {
+  return {
+    firstName: data.firstName,
+    lastName: data.lastName,
+    phoneNumber: data.phoneNumber,
+    address: data.address || null,
+    latitude: toCoordinate(data.latitude),
+    longitude: toCoordinate(data.longitude),
+    preferredDeliveryStart: data.preferredDeliveryStart || null,
+    preferredDeliveryEnd: data.preferredDeliveryEnd || null,
+    suggestions: data.suggestions || null,
+    otherAllergies: data.otherAllergies || null,
+  };
+}
+
+export async function adminCreateCustomer(
+  input: CustomerProfileInput
+): Promise<{ error: string } | { id: string }> {
+  await requireAdmin();
+  const data = customerProfileSchema.parse(input);
+
+  let profile;
   try {
-    const result = await auth.api.signUpEmail({
-      body: {
-        name: data.phoneNumber,
-        email: phoneToLocalEmail(data.phoneNumber),
-        password: data.password,
-        phoneNumber: data.phoneNumber,
-      },
-    });
-    userId = result.user.id;
+    profile = await db.customerProfile.create({ data: profileData(data) });
   } catch (error) {
-    if (error instanceof APIError && error.status === "UNPROCESSABLE_ENTITY") {
-      return { error: "A customer with this phone number is already registered." };
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2002"
+    ) {
+      return { error: "A customer with this phone number already exists." };
     }
-    return { error: "Could not create the customer account." };
+    throw error;
   }
 
-  const profile = await db.customerProfile.create({
-    data: { userId, firstName: data.firstName, lastName: data.lastName },
-  });
   await db.customerProfileTag.create({
     data: { customerProfileId: profile.id, tag: "NEW_CUSTOMER" },
   });
 
   revalidatePath("/admin/customers");
+  return { id: profile.id };
 }
 
-function toCoordinate(value: string | number | null | undefined, min: number, max: number) {
-  if (value === "" || value === null || value === undefined) return null;
-  const num = typeof value === "number" ? value : Number(value);
-  if (Number.isNaN(num) || num < min || num > max) return null;
-  return num;
-}
-
-export async function upsertCustomerProfile(input: CustomerProfileInput) {
-  const userId = await requireCustomerId();
+export async function adminUpdateCustomerProfile(
+  customerProfileId: string,
+  input: CustomerProfileInput
+): Promise<{ error: string } | void> {
+  await requireAdmin();
   const data = customerProfileSchema.parse(input);
-  const latitude = toCoordinate(data.latitude, -90, 90);
-  const longitude = toCoordinate(data.longitude, -180, 180);
 
-  const existing = await db.customerProfile.findUnique({
-    where: { userId },
-    select: { id: true },
-  });
-
-  const profile = await db.customerProfile.upsert({
-    where: { userId },
-    create: {
-      userId,
-      firstName: data.firstName,
-      lastName: data.lastName,
-      address: data.address || null,
-      latitude,
-      longitude,
-      preferredDeliveryStart: data.preferredDeliveryStart || null,
-      preferredDeliveryEnd: data.preferredDeliveryEnd || null,
-      suggestions: data.suggestions || null,
-    },
-    update: {
-      firstName: data.firstName,
-      lastName: data.lastName,
-      address: data.address || null,
-      latitude,
-      longitude,
-      preferredDeliveryStart: data.preferredDeliveryStart || null,
-      preferredDeliveryEnd: data.preferredDeliveryEnd || null,
-      suggestions: data.suggestions || null,
-    },
-  });
-
-  if (!existing) {
-    await db.customerProfileTag.upsert({
-      where: {
-        customerProfileId_tag: {
-          customerProfileId: profile.id,
-          tag: "NEW_CUSTOMER",
-        },
-      },
-      create: { customerProfileId: profile.id, tag: "NEW_CUSTOMER" },
-      update: {},
+  try {
+    await db.customerProfile.update({
+      where: { id: customerProfileId },
+      data: profileData(data),
     });
+  } catch (error) {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2002"
+    ) {
+      return { error: "Another customer already uses this phone number." };
+    }
+    throw error;
   }
 
-  revalidatePath("/dashboard/profile");
-  revalidatePath("/dashboard");
+  revalidatePath(`/admin/customers/${customerProfileId}`);
+  revalidatePath("/admin/customers");
 }
 
-export async function addCustomerPreference(input: CustomerPreferenceInput) {
-  const userId = await requireCustomerId();
+export async function adminSetCustomerStatus(
+  customerProfileId: string,
+  status: CustomerStatusInput
+) {
+  await requireAdmin();
+  const data = customerStatusEnum.parse(status);
+
+  await db.customerProfile.update({
+    where: { id: customerProfileId },
+    data: { status: data },
+  });
+
+  revalidatePath(`/admin/customers/${customerProfileId}`);
+  revalidatePath("/admin/customers");
+}
+
+export async function adminAddCustomerPreference(
+  customerProfileId: string,
+  input: CustomerPreferenceInput
+) {
+  await requireAdmin();
   const data = customerPreferenceSchema.parse(input);
 
-  const profile = await db.customerProfile.findUniqueOrThrow({
-    where: { userId },
-    select: { id: true },
-  });
-
   await db.customerPreference.create({
-    data: { customerProfileId: profile.id, type: data.type, label: data.label },
+    data: { customerProfileId, type: data.type, label: data.label },
   });
 
-  revalidatePath("/dashboard/profile");
+  revalidatePath(`/admin/customers/${customerProfileId}`);
 }
 
-export async function deleteCustomerPreference(preferenceId: string) {
-  const userId = await requireCustomerId();
+export async function adminDeleteCustomerPreference(
+  customerProfileId: string,
+  preferenceId: string
+) {
+  await requireAdmin();
 
   await db.customerPreference.deleteMany({
-    where: { id: preferenceId, customerProfile: { userId } },
+    where: { id: preferenceId, customerProfileId },
   });
 
-  revalidatePath("/dashboard/profile");
+  revalidatePath(`/admin/customers/${customerProfileId}`);
 }
 
-export async function updateCustomerAllergies(input: CustomerAllergiesInput) {
-  const userId = await requireCustomerId();
+export async function adminUpdateCustomerAllergies(
+  customerProfileId: string,
+  input: CustomerAllergiesInput
+) {
+  await requireAdmin();
   const data = customerAllergiesSchema.parse(input);
-
-  const profile = await db.customerProfile.findUniqueOrThrow({
-    where: { userId },
-    select: { id: true },
-  });
 
   await db.$transaction([
     ...data.allergies.map(({ allergyId, checked, notes }) =>
       checked
         ? db.customerAllergy.upsert({
             where: {
-              customerProfileId_allergyId: {
-                customerProfileId: profile.id,
-                allergyId,
-              },
+              customerProfileId_allergyId: { customerProfileId, allergyId },
             },
-            create: { customerProfileId: profile.id, allergyId, notes: notes || null },
+            create: { customerProfileId, allergyId, notes: notes || null },
             update: { notes: notes || null },
           })
         : db.customerAllergy.deleteMany({
-            where: { customerProfileId: profile.id, allergyId },
+            where: { customerProfileId, allergyId },
           })
     ),
     db.customerProfile.update({
-      where: { id: profile.id },
+      where: { id: customerProfileId },
       data: { otherAllergies: data.otherAllergies || null },
     }),
   ]);
 
-  revalidatePath("/dashboard/profile");
+  revalidatePath(`/admin/customers/${customerProfileId}`);
 }
 
 export async function toggleCustomerTag(

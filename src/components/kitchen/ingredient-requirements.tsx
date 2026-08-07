@@ -26,17 +26,16 @@ export async function IngredientRequirements() {
       <CardHeader>
         <CardTitle>Ingredient preparation list</CardTitle>
         <CardDescription>
-          {plan
-            ? `Total quantities to prepare for ${plan.weekLabel}, from active subscribers' selected meals.`
-            : "Generated from active subscribers, their selected meals and each recipe."}
+          Total quantities to prepare for {plan.weekLabel}, from active
+          customers&apos; planned meals.
         </CardDescription>
       </CardHeader>
       <CardContent>
-        {!plan || plan.requirements.length === 0 ? (
+        {plan.requirements.length === 0 ? (
           <EmptyState
             icon={ClipboardList}
             title="Nothing to prepare yet"
-            description="Available once a weekly menu is published and customers have active subscriptions."
+            description="Available once customers have meals planned for this week."
           />
         ) : (
           <Table>

@@ -33,7 +33,7 @@ export function StaffAuthForm({ mode }: { mode: "login" | "register" }) {
   });
 
   function redirectByRole(role: Role | undefined) {
-    router.push(ROLE_HOME[role ?? "CUSTOMER"]);
+    router.push(ROLE_HOME[role ?? "PENDING"]);
     router.refresh();
   }
 
@@ -153,8 +153,8 @@ export function StaffAuthForm({ mode }: { mode: "login" | "register" }) {
         Create account
       </Button>
       <p className="text-muted-foreground text-center text-xs">
-        New staff accounts start with customer access. An admin promotes you
-        to your team role.
+        New staff accounts have no access yet. An admin promotes you to your
+        team role.
       </p>
     </form>
   );

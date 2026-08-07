@@ -8,8 +8,8 @@ import { Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import {
-  addCustomerPreference,
-  deleteCustomerPreference,
+  adminAddCustomerPreference,
+  adminDeleteCustomerPreference,
 } from "@/lib/actions/customer";
 import {
   customerPreferenceSchema,
@@ -34,9 +34,11 @@ const TYPE_LABEL: Record<Preference["type"], string> = {
   AVOID: "Avoids",
 };
 
-export function PreferencesManager({
+export function CustomerPreferencesManager({
+  customerProfileId,
   preferences,
 }: {
+  customerProfileId: string;
   preferences: Preference[];
 }) {
   const router = useRouter();
@@ -51,7 +53,7 @@ export function PreferencesManager({
   function onSubmit(values: CustomerPreferenceInput) {
     startTransition(async () => {
       try {
-        await addCustomerPreference(values);
+        await adminAddCustomerPreference(customerProfileId, values);
         form.reset({ type: values.type, label: "" });
         toast.success("Preference added.");
         router.refresh();
@@ -65,7 +67,7 @@ export function PreferencesManager({
     setDeletingId(id);
     startTransition(async () => {
       try {
-        await deleteCustomerPreference(id);
+        await adminDeleteCustomerPreference(customerProfileId, id);
         router.refresh();
       } catch {
         toast.error("Could not remove preference.");

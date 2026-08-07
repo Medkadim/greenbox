@@ -4,10 +4,9 @@ import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { MapPin } from "lucide-react";
 import { toast } from "sonner";
 
-import { upsertCustomerProfile } from "@/lib/actions/customer";
+import { adminUpdateCustomerProfile } from "@/lib/actions/customer";
 import {
   customerProfileSchema,
   type CustomerProfileInput,
@@ -17,9 +16,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
-export function ProfileForm({
+export function CustomerProfileForm({
+  customerProfileId,
   defaultValues,
 }: {
+  customerProfileId: string;
   defaultValues: CustomerProfileInput;
 }) {
   const router = useRouter();
@@ -32,29 +33,14 @@ export function ProfileForm({
 
   function onSubmit(values: CustomerProfileInput) {
     startTransition(async () => {
-      try {
-        await upsertCustomerProfile(values);
-        toast.success("Profile saved.");
-        router.refresh();
-      } catch {
-        toast.error("Could not save your profile.");
+      const result = await adminUpdateCustomerProfile(customerProfileId, values);
+      if (result?.error) {
+        toast.error(result.error);
+        return;
       }
+      toast.success("Profile saved.");
+      router.refresh();
     });
-  }
-
-  function useCurrentLocation() {
-    if (!navigator.geolocation) {
-      toast.error("Location isn't available on this device.");
-      return;
-    }
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        form.setValue("latitude", position.coords.latitude, { shouldDirty: true });
-        form.setValue("longitude", position.coords.longitude, { shouldDirty: true });
-        toast.success("Location captured.");
-      },
-      () => toast.error("Could not read your location.")
-    );
   }
 
   return (
@@ -78,6 +64,15 @@ export function ProfileForm({
             </p>
           )}
         </div>
+        <div className="space-y-2">
+          <Label htmlFor="phoneNumber">Phone number</Label>
+          <Input id="phoneNumber" {...form.register("phoneNumber")} />
+          {form.formState.errors.phoneNumber && (
+            <p className="text-destructive text-sm">
+              {form.formState.errors.phoneNumber.message}
+            </p>
+          )}
+        </div>
       </div>
 
       <div className="space-y-2">
@@ -86,18 +81,7 @@ export function ProfileForm({
       </div>
 
       <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <Label>GPS location</Label>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={useCurrentLocation}
-          >
-            <MapPin />
-            Use my current location
-          </Button>
-        </div>
+        <Label>GPS location</Label>
         <div className="grid gap-4 sm:grid-cols-2">
           <Input
             aria-label="Latitude"
@@ -136,14 +120,11 @@ export function ProfileForm({
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="suggestions">Suggestions</Label>
-        <Textarea
-          id="suggestions"
-          rows={3}
-          placeholder="Anything you'd like GreenBox to know?"
-          {...form.register("suggestions")}
-        />
+        <Label htmlFor="suggestions">Suggestions / notes</Label>
+        <Textarea id="suggestions" rows={3} {...form.register("suggestions")} />
       </div>
+
+      <input type="hidden" {...form.register("otherAllergies")} />
 
       <Button type="submit" disabled={isPending}>
         Save profile

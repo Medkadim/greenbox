@@ -8,7 +8,7 @@ import { NAV_ITEMS } from "@/lib/nav-config";
 import type { Role } from "@/lib/rbac";
 
 const ROLE_LABEL: Record<Role, string> = {
-  CUSTOMER: "Customer",
+  PENDING: "Pending",
   KITCHEN_CHEF: "Kitchen",
   DELIVERY_DRIVER: "Delivery",
   ADMIN: "Admin",

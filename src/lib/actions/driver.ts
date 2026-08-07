@@ -2,37 +2,44 @@
 
 import { revalidatePath } from "next/cache";
 
+import { APIError } from "better-auth";
+
 import { db } from "@/lib/db";
+import { auth } from "@/lib/auth";
 import { requireAdmin } from "@/lib/auth-guards";
+import { phoneToLocalEmail } from "@/lib/phone-identity";
 import {
-  createDriverSchema,
-  type CreateDriverInput,
+  adminCreateDriverSchema,
+  type AdminCreateDriverInput,
 } from "@/lib/validations/driver";
 
-export async function createDriver(
-  input: CreateDriverInput
+export async function adminCreateDriver(
+  input: AdminCreateDriverInput
 ): Promise<{ error: string } | void> {
   await requireAdmin();
-  const data = createDriverSchema.parse(input);
+  const data = adminCreateDriverSchema.parse(input);
 
-  const user = await db.user.findUnique({
-    where: { phoneNumber: data.phoneNumber },
-  });
-  if (!user) {
-    return {
-      error: "No account found for this phone number. Ask them to sign in first.",
-    };
+  let userId: string;
+  try {
+    const result = await auth.api.signUpEmail({
+      body: {
+        name: data.name,
+        email: phoneToLocalEmail(data.phoneNumber),
+        password: data.password,
+        phoneNumber: data.phoneNumber,
+      },
+    });
+    userId = result.user.id;
+  } catch (error) {
+    if (error instanceof APIError && error.status === "UNPROCESSABLE_ENTITY") {
+      return { error: "A driver with this phone number is already registered." };
+    }
+    return { error: "Could not create the driver account." };
   }
-  if (user.role === "ADMIN") {
-    return { error: "Cannot make an admin a driver." };
-  }
 
-  await db.user.update({ where: { id: user.id }, data: { role: "DELIVERY_DRIVER" } });
-
-  await db.driver.upsert({
-    where: { userId: user.id },
-    create: { userId: user.id, vehicleInfo: data.vehicleInfo || null, isActive: true },
-    update: { vehicleInfo: data.vehicleInfo || null, isActive: true },
+  await db.user.update({ where: { id: userId }, data: { role: "DELIVERY_DRIVER" } });
+  await db.driver.create({
+    data: { userId, vehicleInfo: data.vehicleInfo || null, isActive: true },
   });
 
   revalidatePath("/admin/drivers");

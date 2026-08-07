@@ -1,8 +1,12 @@
 import { z } from "zod";
 
-export const createDriverSchema = z.object({
-  phoneNumber: z.string().min(8, "Enter a valid phone number"),
+import { phoneNumberSchema, passwordSchema } from "@/lib/validations/auth";
+
+export const adminCreateDriverSchema = z.object({
+  name: z.string().min(1, "Name is required").max(80),
+  phoneNumber: phoneNumberSchema,
+  password: passwordSchema,
   vehicleInfo: z.string().max(100).optional().or(z.literal("")),
 });
 
-export type CreateDriverInput = z.infer<typeof createDriverSchema>;
+export type AdminCreateDriverInput = z.infer<typeof adminCreateDriverSchema>;

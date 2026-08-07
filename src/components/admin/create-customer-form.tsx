@@ -6,29 +6,41 @@ import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
 import { adminCreateCustomer } from "@/lib/actions/customer";
-import type { AdminCreateCustomerInput } from "@/lib/validations/customer";
+import type { CustomerProfileInput } from "@/lib/validations/customer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+
+const EMPTY: CustomerProfileInput = {
+  firstName: "",
+  lastName: "",
+  phoneNumber: "",
+  address: "",
+  latitude: "",
+  longitude: "",
+  preferredDeliveryStart: "",
+  preferredDeliveryEnd: "",
+  suggestions: "",
+  otherAllergies: "",
+};
 
 export function CreateCustomerForm() {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
-  const form = useForm<AdminCreateCustomerInput>({
-    defaultValues: { firstName: "", lastName: "", phoneNumber: "", password: "" },
-  });
+  const form = useForm<CustomerProfileInput>({ defaultValues: EMPTY });
 
-  function onSubmit(values: AdminCreateCustomerInput) {
+  function onSubmit(values: CustomerProfileInput) {
     startTransition(async () => {
       const result = await adminCreateCustomer(values);
-      if (result?.error) {
+      if ("error" in result) {
         toast.error(result.error);
         return;
       }
-      form.reset({ firstName: "", lastName: "", phoneNumber: "", password: "" });
-      toast.success("Customer account created.");
-      router.refresh();
+      form.reset(EMPTY);
+      toast.success("Customer created.");
+      router.push(`/admin/customers/${result.id}`);
     });
   }
 
@@ -53,20 +65,42 @@ export function CreateCustomerForm() {
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="customer-password">Password</Label>
+          <Label htmlFor="customer-address">Address</Label>
+          <Input id="customer-address" {...form.register("address")} />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="customer-deliveryStart">Preferred delivery start</Label>
           <Input
-            id="customer-password"
-            type="password"
-            placeholder="At least 8 characters"
-            required
-            {...form.register("password")}
+            id="customer-deliveryStart"
+            placeholder="12:00"
+            {...form.register("preferredDeliveryStart")}
           />
         </div>
+        <div className="space-y-2">
+          <Label htmlFor="customer-deliveryEnd">Preferred delivery end</Label>
+          <Input
+            id="customer-deliveryEnd"
+            placeholder="14:00"
+            {...form.register("preferredDeliveryEnd")}
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="customer-latitude">Latitude (optional)</Label>
+          <Input id="customer-latitude" {...form.register("latitude")} />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="customer-longitude">Longitude (optional)</Label>
+          <Input id="customer-longitude" {...form.register("longitude")} />
+        </div>
       </div>
-      <p className="text-muted-foreground text-xs">
-        Share this password with the customer — they can sign in with it right
-        away from the Customer tab on the login page.
-      </p>
+      <div className="space-y-2">
+        <Label htmlFor="customer-otherAllergies">Other allergies (free text)</Label>
+        <Input id="customer-otherAllergies" {...form.register("otherAllergies")} />
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="customer-suggestions">Suggestions / notes</Label>
+        <Textarea id="customer-suggestions" rows={2} {...form.register("suggestions")} />
+      </div>
       <Button type="submit" disabled={isPending}>
         Create customer
       </Button>

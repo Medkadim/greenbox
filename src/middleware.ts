@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionCookie } from "better-auth/cookies";
 
-const PROTECTED_PREFIXES = ["/dashboard", "/kitchen", "/delivery", "/admin"];
+const PROTECTED_PREFIXES = ["/kitchen", "/delivery", "/admin", "/pending-approval"];
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -24,5 +24,10 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/kitchen/:path*", "/delivery/:path*", "/admin/:path*"],
+  matcher: [
+    "/kitchen/:path*",
+    "/delivery/:path*",
+    "/admin/:path*",
+    "/pending-approval/:path*",
+  ],
 };

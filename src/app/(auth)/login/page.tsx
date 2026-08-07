@@ -1,6 +1,6 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CustomerAuthForm } from "@/components/auth/customer-auth-form";
+import { DriverAuthForm } from "@/components/auth/driver-auth-form";
 import { StaffAuthForm } from "@/components/auth/staff-auth-form";
 
 export default function LoginPage() {
@@ -8,19 +8,19 @@ export default function LoginPage() {
     <Card>
       <CardHeader>
         <CardTitle>Welcome back</CardTitle>
-        <CardDescription>Sign in to manage your meals.</CardDescription>
+        <CardDescription>Sign in to GreenBox.</CardDescription>
       </CardHeader>
       <CardContent>
-        <Tabs defaultValue="customer">
+        <Tabs defaultValue="staff">
           <TabsList className="mb-4 w-full">
-            <TabsTrigger value="customer">Customer</TabsTrigger>
             <TabsTrigger value="staff">Team</TabsTrigger>
+            <TabsTrigger value="driver">Driver</TabsTrigger>
           </TabsList>
-          <TabsContent value="customer">
-            <CustomerAuthForm mode="login" />
-          </TabsContent>
           <TabsContent value="staff">
             <StaffAuthForm mode="login" />
+          </TabsContent>
+          <TabsContent value="driver">
+            <DriverAuthForm />
           </TabsContent>
         </Tabs>
       </CardContent>

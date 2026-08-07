@@ -1,27 +1,26 @@
 import Link from "next/link";
-import { Leaf, Salad, Truck, CalendarCheck } from "lucide-react";
+import { ChefHat, Leaf, ClipboardList, Truck } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 const FEATURES = [
   {
-    icon: CalendarCheck,
-    title: "Weekly menus",
+    icon: ClipboardList,
+    title: "Customer records",
     description:
-      "Follow GreenBox's recommended menu or build your own from our healthy meal selection.",
+      "The admin enters each customer's weekly meal plan, delivery window, allergies and remarks.",
   },
   {
-    icon: Salad,
-    title: "Personalized meals",
+    icon: ChefHat,
+    title: "Kitchen production",
     description:
-      "Tell us your allergies, preferences and per-meal requests — the kitchen sees it all.",
+      "The kitchen sees exactly what to prepare each day, with every customer's allergies and remarks.",
   },
   {
     icon: Truck,
-    title: "Reliable delivery",
-    description:
-      "Track your delivery in real time, at the time that suits you.",
+    title: "Delivery tracking",
+    description: "Assign each delivery to a driver and track it through to done.",
   },
 ];
 
@@ -34,14 +33,9 @@ export default function Home() {
             <Leaf className="text-primary size-5" />
             GreenBox
           </div>
-          <div className="flex items-center gap-2">
-            <Button asChild variant="ghost">
-              <Link href="/login">Sign in</Link>
-            </Button>
-            <Button asChild>
-              <Link href="/register">Get started</Link>
-            </Button>
-          </div>
+          <Button asChild>
+            <Link href="/login">Sign in</Link>
+          </Button>
         </div>
       </header>
 
@@ -49,19 +43,15 @@ export default function Home() {
         <section className="mx-auto max-w-6xl px-4 py-16 sm:py-24">
           <div className="max-w-2xl space-y-6">
             <h1 className="text-4xl font-semibold tracking-tight sm:text-5xl">
-              Healthy meals, made for your week in Tangier.
+              GreenBox operations, Tangier.
             </h1>
             <p className="text-muted-foreground text-lg">
-              Subscribe once, eat well all week. Choose the GreenBox
-              recommended menu or build your own — we handle the cooking and
-              the delivery.
+              Internal console for the GreenBox team — admin, kitchen and
+              delivery. Customer accounts are managed entirely by the admin.
             </p>
             <div className="flex flex-col gap-3 sm:flex-row">
               <Button asChild size="lg">
-                <Link href="/register">Start your subscription</Link>
-              </Button>
-              <Button asChild size="lg" variant="outline">
-                <Link href="/login">I already have an account</Link>
+                <Link href="/login">Sign in</Link>
               </Button>
             </div>
           </div>

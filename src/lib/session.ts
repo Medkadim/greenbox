@@ -8,5 +8,5 @@ export async function getServerSession() {
 }
 
 export function getUserRole(user: { role?: string | null }): Role {
-  return (user.role as Role | undefined) ?? "CUSTOMER";
+  return (user.role as Role | undefined) ?? "PENDING";
 }

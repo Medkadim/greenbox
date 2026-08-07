@@ -13,12 +13,12 @@ export const auth = betterAuth({
     additionalFields: {
       role: {
         type: "string",
-        defaultValue: "CUSTOMER",
+        defaultValue: "PENDING",
         input: false,
       },
-      // Real phone number for CUSTOMER/DELIVERY_DRIVER accounts, which sign
-      // in with phone + password instead of email + password. `email` still
-      // holds a deterministic local address for those accounts — see
+      // Real phone number for DELIVERY_DRIVER accounts, which sign in with
+      // phone + password instead of email + password. `email` still holds a
+      // deterministic local address for those accounts — see
       // phoneToLocalEmail — since Better Auth's credential provider is
       // keyed by email either way.
       phoneNumber: {
