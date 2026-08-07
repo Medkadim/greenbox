@@ -64,13 +64,13 @@ export default async function DeliveryDashboardPage() {
                       key={delivery.id}
                       deliveryId={delivery.id}
                       customerName={`${delivery.customerProfile.firstName} ${delivery.customerProfile.lastName}`}
-                      phoneNumber={delivery.customerProfile.user.phoneNumber}
+                      phoneNumber={delivery.customerProfile.phoneNumber}
                       address={delivery.addressSnapshot}
                       latitude={delivery.latitude}
                       longitude={delivery.longitude}
                       preferredTimeStart={delivery.preferredTimeStart}
                       preferredTimeEnd={delivery.preferredTimeEnd}
-                      mealName={delivery.customerMealSelection.menuItem.meal.name}
+                      mealName={delivery.customerMealSelection.meal.name}
                       status={delivery.status}
                       driverAssignment={
                         isAdmin

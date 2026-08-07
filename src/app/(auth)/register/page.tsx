@@ -1,30 +1,20 @@
 import Link from "next/link";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CustomerAuthForm } from "@/components/auth/customer-auth-form";
 import { StaffAuthForm } from "@/components/auth/staff-auth-form";
 
+// Only the GreenBox team self-registers here (an admin then promotes the
+// account to KITCHEN_CHEF/ADMIN). Customers and drivers have no self-service
+// signup — the admin creates those accounts directly.
 export default function RegisterPage() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Create your account</CardTitle>
-        <CardDescription>Start your GreenBox subscription.</CardDescription>
+        <CardTitle>Create a team account</CardTitle>
+        <CardDescription>For GreenBox staff only.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <Tabs defaultValue="customer">
-          <TabsList className="mb-4 w-full">
-            <TabsTrigger value="customer">Customer</TabsTrigger>
-            <TabsTrigger value="staff">Team</TabsTrigger>
-          </TabsList>
-          <TabsContent value="customer">
-            <CustomerAuthForm mode="register" />
-          </TabsContent>
-          <TabsContent value="staff">
-            <StaffAuthForm mode="register" />
-          </TabsContent>
-        </Tabs>
+        <StaffAuthForm mode="register" />
         <p className="text-muted-foreground text-center text-sm">
           Already have an account?{" "}
           <Link href="/login" className="text-primary underline">

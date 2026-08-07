@@ -50,7 +50,7 @@ export default async function AdminCustomersPage() {
             <EmptyState
               icon={Users}
               title="No customers yet"
-              description="Customers appear here once they complete their profile."
+              description="Add your first customer above."
             />
           ) : (
             <Table>
@@ -58,6 +58,7 @@ export default async function AdminCustomersPage() {
                 <TableRow>
                   <TableHead>Name</TableHead>
                   <TableHead>Phone</TableHead>
+                  <TableHead>Status</TableHead>
                   <TableHead>Tags</TableHead>
                   <TableHead>Joined</TableHead>
                 </TableRow>
@@ -73,7 +74,14 @@ export default async function AdminCustomersPage() {
                         {customer.firstName} {customer.lastName}
                       </Link>
                     </TableCell>
-                    <TableCell>{customer.user.phoneNumber ?? "—"}</TableCell>
+                    <TableCell>{customer.phoneNumber}</TableCell>
+                    <TableCell>
+                      <Badge
+                        variant={customer.status === "ACTIVE" ? "default" : "outline"}
+                      >
+                        {customer.status.toLowerCase()}
+                      </Badge>
+                    </TableCell>
                     <TableCell>
                       <div className="flex flex-wrap gap-1">
                         {customer.tags.length === 0 && "—"}

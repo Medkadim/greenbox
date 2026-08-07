@@ -1,14 +1,7 @@
 import type { Role } from "@/lib/rbac";
 
 export const NAV_ITEMS: Record<Role, { label: string; href: string }[]> = {
-  CUSTOMER: [
-    { label: "Dashboard", href: "/dashboard" },
-    { label: "Weekly menu", href: "/dashboard/menu" },
-    { label: "Subscription", href: "/dashboard/subscription" },
-    { label: "Notifications", href: "/dashboard/notifications" },
-    { label: "Ratings", href: "/dashboard/ratings" },
-    { label: "Profile", href: "/dashboard/profile" },
-  ],
+  PENDING: [],
   KITCHEN_CHEF: [
     { label: "Production", href: "/kitchen" },
     { label: "Ingredients", href: "/kitchen/ingredients" },
@@ -18,12 +11,9 @@ export const NAV_ITEMS: Record<Role, { label: string; href: string }[]> = {
     { label: "Overview", href: "/admin" },
     { label: "Customers", href: "/admin/customers" },
     { label: "Meals", href: "/admin/meals" },
-    { label: "Menus", href: "/admin/menus" },
+    { label: "Ingredients", href: "/admin/ingredients" },
     { label: "Kitchen", href: "/admin/kitchen" },
     { label: "Deliveries", href: "/delivery" },
     { label: "Drivers", href: "/admin/drivers" },
-    { label: "Plans", href: "/admin/plans" },
-    { label: "Subscriptions", href: "/admin/subscriptions" },
-    { label: "Finance", href: "/admin/finance" },
   ],
 };

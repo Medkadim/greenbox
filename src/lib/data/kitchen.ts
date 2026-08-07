@@ -1,10 +1,10 @@
 import { db } from "@/lib/db";
-import { dayOfWeekFromDate, MEAL_SLOTS } from "@/lib/weekly-menu-constants";
+import { dayOfWeekFromDate, mondayOf, MEAL_SLOTS } from "@/lib/weekly-menu-constants";
 import type { MealSlot, Prisma } from "@/generated/prisma/client";
 
 export type ProductionCustomer = {
   name: string;
-  requests: string[];
+  note: string | null;
   allergies: { name: string; notes: string | null }[];
   otherAllergies: string | null;
   tags: string[];
@@ -21,80 +21,54 @@ export type ProductionMeal = {
 };
 
 export type DailyProduction = {
-  weekLabel: string;
+  dayLabel: string;
   slots: Record<MealSlot, { totalMeals: number; meals: ProductionMeal[] }>;
 };
 
-const mealWithRecipe = {
+const selectionWithMeal = {
   include: {
-    recipe: { include: { ingredients: { include: { ingredient: true } } } },
+    meal: {
+      include: {
+        recipe: { include: { ingredients: { include: { ingredient: true } } } },
+      },
+    },
+    customerProfile: {
+      include: { allergies: { include: { allergy: true } }, tags: true },
+    },
   },
-} satisfies Prisma.MealDefaultArgs;
+} satisfies Prisma.CustomerMealSelectionDefaultArgs;
 
-type MealWithRecipe = Prisma.MealGetPayload<typeof mealWithRecipe>;
+type SelectionWithMeal = Prisma.CustomerMealSelectionGetPayload<typeof selectionWithMeal>;
 
-export async function getDailyProduction(): Promise<DailyProduction | null> {
-  const today = dayOfWeekFromDate(new Date());
-  const todayMidnight = new Date();
-  todayMidnight.setHours(0, 0, 0, 0);
+export async function getDailyProduction(): Promise<DailyProduction> {
+  const today = new Date();
+  const dayOfWeek = dayOfWeekFromDate(today);
+  const weekStartDate = mondayOf(today);
 
-  const menu = await db.weeklyMenu.findFirst({
+  const selections = await db.customerMealSelection.findMany({
     where: {
-      status: { in: ["PUBLISHED", "LOCKED"] },
-      weekEndDate: { gte: todayMidnight },
+      weekStartDate,
+      dayOfWeek,
+      customerProfile: { status: "ACTIVE" },
     },
-    orderBy: { weekStartDate: "asc" },
-    include: {
-      menuItems: {
-        where: { dayOfWeek: today, isRecommended: true },
-        include: { meal: mealWithRecipe },
-      },
-    },
+    ...selectionWithMeal,
   });
-  if (!menu) return null;
-
-  const [activeSubscriptions, selections] = await Promise.all([
-    db.subscription.findMany({
-      where: { status: "ACTIVE" },
-      include: {
-        customerProfile: {
-          include: { allergies: { include: { allergy: true } }, tags: true },
-        },
-      },
-    }),
-    db.customerMealSelection.findMany({
-      where: { weeklyMenuId: menu.id, menuItem: { dayOfWeek: today } },
-      include: {
-        menuItem: { include: { meal: mealWithRecipe } },
-        customizations: true,
-      },
-    }),
-  ]);
 
   const slots = Object.fromEntries(
     MEAL_SLOTS.map((slot) => [slot, { totalMeals: 0, meals: [] as ProductionMeal[] }])
   ) as DailyProduction["slots"];
 
   for (const slot of MEAL_SLOTS) {
-    const recommendedItem = menu.menuItems.find((mi) => mi.mealSlot === slot);
     const byMeal = new Map<
       string,
-      { meal: MealWithRecipe; customers: ProductionCustomer[] }
+      { meal: SelectionWithMeal["meal"]; customers: ProductionCustomer[] }
     >();
 
-    for (const subscription of activeSubscriptions) {
-      const profile = subscription.customerProfile;
-      const selection = selections.find(
-        (s) =>
-          s.customerProfileId === profile.id && s.menuItem.mealSlot === slot
-      );
-
-      const meal = selection ? selection.menuItem.meal : recommendedItem?.meal;
-      if (!meal) continue;
-
+    for (const selection of selections.filter((s) => s.mealSlot === slot)) {
+      const profile = selection.customerProfile;
       const customer: ProductionCustomer = {
         name: `${profile.firstName} ${profile.lastName}`,
-        requests: selection ? selection.customizations.map((c) => c.note) : [],
+        note: selection.note,
         allergies: profile.allergies.map((a) => ({
           name: a.allergy.name,
           notes: a.notes,
@@ -103,9 +77,9 @@ export async function getDailyProduction(): Promise<DailyProduction | null> {
         tags: profile.tags.map((t) => t.tag),
       };
 
-      const entry = byMeal.get(meal.id) ?? { meal, customers: [] };
+      const entry = byMeal.get(selection.meal.id) ?? { meal: selection.meal, customers: [] };
       entry.customers.push(customer);
-      byMeal.set(meal.id, entry);
+      byMeal.set(selection.meal.id, entry);
     }
 
     const meals: ProductionMeal[] = Array.from(byMeal.entries()).map(
@@ -135,7 +109,11 @@ export async function getDailyProduction(): Promise<DailyProduction | null> {
   }
 
   return {
-    weekLabel: `${menu.weekStartDate.toLocaleDateString()} – ${menu.weekEndDate.toLocaleDateString()}`,
+    dayLabel: today.toLocaleDateString(undefined, {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+    }),
     slots,
   };
 }

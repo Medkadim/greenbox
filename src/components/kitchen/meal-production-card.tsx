@@ -50,7 +50,7 @@ export function MealProductionCard({ meal }: { meal: ProductionMeal }) {
         {meal.customers.length > 0 && (
           <div>
             <p className="text-muted-foreground mb-1 text-xs font-medium tracking-wide uppercase">
-              Customer requests
+              Customers
             </p>
             <ul className="space-y-2">
               {meal.customers.map((customer, index) => (
@@ -77,11 +77,11 @@ export function MealProductionCard({ meal }: { meal: ProductionMeal }) {
                         {tag.replaceAll("_", " ").toLowerCase()}
                       </Badge>
                     ))}
-                    {customer.requests.map((request, i) => (
-                      <Badge key={i} variant="secondary" className="text-xs">
-                        {request}
+                    {customer.note && (
+                      <Badge variant="secondary" className="text-xs">
+                        {customer.note}
                       </Badge>
-                    ))}
+                    )}
                   </div>
                 </li>
               ))}

@@ -7,27 +7,28 @@ export async function getAdminOverviewStats() {
   const todayEnd = new Date(todayStart);
   todayEnd.setDate(todayEnd.getDate() + 1);
 
-  const [activeSubscribers, deliveriesToday, revenueAgg, production] =
+  const [activeCustomers, deliveriesToday, deliveryStatusGroups, production] =
     await Promise.all([
-      db.subscription.count({ where: { status: "ACTIVE" } }),
+      db.customerProfile.count({ where: { status: "ACTIVE" } }),
       db.delivery.count({
         where: { scheduledDate: { gte: todayStart, lt: todayEnd } },
       }),
-      db.payment.aggregate({
-        where: { status: "PAID" },
-        _sum: { amount: true },
+      db.delivery.groupBy({
+        by: ["status"],
+        where: { scheduledDate: { gte: todayStart, lt: todayEnd } },
+        _count: { _all: true },
       }),
       getDailyProduction(),
     ]);
 
-  const mealsToday = production
-    ? Object.values(production.slots).reduce((sum, s) => sum + s.totalMeals, 0)
-    : 0;
+  const mealsToday = Object.values(production.slots).reduce(
+    (sum, s) => sum + s.totalMeals,
+    0
+  );
 
-  return {
-    activeSubscribers,
-    mealsToday,
-    deliveriesToday,
-    totalRevenue: Number(revenueAgg._sum.amount ?? 0),
-  };
+  const deliveryStatusBreakdown = Object.fromEntries(
+    deliveryStatusGroups.map((g) => [g.status, g._count._all])
+  );
+
+  return { activeCustomers, mealsToday, deliveriesToday, deliveryStatusBreakdown };
 }

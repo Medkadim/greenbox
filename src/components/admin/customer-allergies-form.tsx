@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
-import { updateCustomerAllergies } from "@/lib/actions/customer";
+import { adminUpdateCustomerAllergies } from "@/lib/actions/customer";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -14,11 +14,13 @@ import { Textarea } from "@/components/ui/textarea";
 type Allergy = { id: string; name: string };
 type ExistingAllergy = { allergyId: string; notes: string | null };
 
-export function AllergiesForm({
+export function CustomerAllergiesForm({
+  customerProfileId,
   allergies,
   existing,
   otherAllergies,
 }: {
+  customerProfileId: string;
   allergies: Allergy[];
   existing: ExistingAllergy[];
   otherAllergies?: string | null;
@@ -45,7 +47,7 @@ export function AllergiesForm({
     event.preventDefault();
     startTransition(async () => {
       try {
-        await updateCustomerAllergies({
+        await adminUpdateCustomerAllergies(customerProfileId, {
           allergies: allergies.map((allergy) => ({
             allergyId: allergy.id,
             checked: state[allergy.id]?.checked ?? false,

@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
-import { CalendarClock, MessageSquare } from "lucide-react";
+import Link from "next/link";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 import {
   Card,
@@ -8,36 +9,56 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { EmptyState } from "@/components/ui/empty-state";
+import { Button } from "@/components/ui/button";
 import { CustomerTagsManager } from "@/components/admin/customer-tags-manager";
-import { getCustomerProfileById } from "@/lib/data/customer";
-
-const PREFERENCE_LABEL: Record<string, string> = {
-  LIKE: "Likes",
-  DISLIKE: "Dislikes",
-  AVOID: "Avoids",
-};
+import { CustomerStatusSelect } from "@/components/admin/customer-status-select";
+import { CustomerProfileForm } from "@/components/admin/customer-profile-form";
+import { CustomerAllergiesForm } from "@/components/admin/customer-allergies-form";
+import { CustomerPreferencesManager } from "@/components/admin/customer-preferences-manager";
+import { CustomerMealPlanner } from "@/components/admin/customer-meal-planner";
+import { getCustomerProfileById, listAllergies } from "@/lib/data/customer";
+import {
+  getCustomerMealSelectionsForWeek,
+  listActiveMealsForPlanning,
+} from "@/lib/data/meal-selection";
+import { mondayOf } from "@/lib/weekly-menu-constants";
 
 export default async function AdminCustomerDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ week?: string }>;
 }) {
   const { id } = await params;
-  const customer = await getCustomerProfileById(id);
+  const { week } = await searchParams;
+  const weekOffset = Number.parseInt(week ?? "0", 10) || 0;
+
+  const [customer, allergies, meals] = await Promise.all([
+    getCustomerProfileById(id),
+    listAllergies(),
+    listActiveMealsForPlanning(),
+  ]);
 
   if (!customer) notFound();
 
+  const weekStartDate = mondayOf(new Date());
+  weekStartDate.setDate(weekStartDate.getDate() + weekOffset * 7);
+  const weekEndDate = new Date(weekStartDate);
+  weekEndDate.setDate(weekEndDate.getDate() + 6);
+
+  const selections = await getCustomerMealSelectionsForWeek(id, weekStartDate);
+
   return (
     <div className="max-w-2xl space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold">
-          {customer.firstName} {customer.lastName}
-        </h1>
-        <p className="text-muted-foreground text-sm">
-          {customer.user.phoneNumber ?? customer.user.email ?? "No contact on file"}
-        </p>
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold">
+            {customer.firstName} {customer.lastName}
+          </h1>
+          <p className="text-muted-foreground text-sm">{customer.phoneNumber}</p>
+        </div>
+        <CustomerStatusSelect customerProfileId={customer.id} status={customer.status} />
       </div>
 
       <Card>
@@ -57,21 +78,22 @@ export default async function AdminCustomerDetailPage({
         <CardHeader>
           <CardTitle>Profile</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-2 text-sm">
-          <p>
-            <span className="text-muted-foreground">Address: </span>
-            {customer.address || "—"}
-          </p>
-          <p>
-            <span className="text-muted-foreground">Preferred delivery: </span>
-            {customer.preferredDeliveryStart && customer.preferredDeliveryEnd
-              ? `${customer.preferredDeliveryStart} – ${customer.preferredDeliveryEnd}`
-              : "—"}
-          </p>
-          <p>
-            <span className="text-muted-foreground">Suggestions: </span>
-            {customer.suggestions || "—"}
-          </p>
+        <CardContent>
+          <CustomerProfileForm
+            customerProfileId={customer.id}
+            defaultValues={{
+              firstName: customer.firstName,
+              lastName: customer.lastName,
+              phoneNumber: customer.phoneNumber,
+              address: customer.address ?? "",
+              latitude: customer.latitude ?? "",
+              longitude: customer.longitude ?? "",
+              preferredDeliveryStart: customer.preferredDeliveryStart ?? "",
+              preferredDeliveryEnd: customer.preferredDeliveryEnd ?? "",
+              suggestions: customer.suggestions ?? "",
+              otherAllergies: customer.otherAllergies ?? "",
+            }}
+          />
         </CardContent>
       </Card>
 
@@ -80,21 +102,15 @@ export default async function AdminCustomerDetailPage({
           <CardTitle>Allergies</CardTitle>
         </CardHeader>
         <CardContent>
-          {customer.allergies.length === 0 && !customer.otherAllergies ? (
-            <p className="text-muted-foreground text-sm">None on file.</p>
-          ) : (
-            <div className="flex flex-wrap gap-2">
-              {customer.allergies.map((a) => (
-                <Badge key={a.id} variant="destructive">
-                  {a.allergy.name}
-                  {a.notes ? ` — ${a.notes}` : ""}
-                </Badge>
-              ))}
-              {customer.otherAllergies && (
-                <Badge variant="destructive">{customer.otherAllergies}</Badge>
-              )}
-            </div>
-          )}
+          <CustomerAllergiesForm
+            customerProfileId={customer.id}
+            allergies={allergies}
+            existing={customer.allergies.map((a) => ({
+              allergyId: a.allergyId,
+              notes: a.notes,
+            }))}
+            otherAllergies={customer.otherAllergies}
+          />
         </CardContent>
       </Card>
 
@@ -103,42 +119,49 @@ export default async function AdminCustomerDetailPage({
           <CardTitle>Preferences</CardTitle>
         </CardHeader>
         <CardContent>
-          {customer.preferences.length === 0 ? (
-            <p className="text-muted-foreground text-sm">None on file.</p>
-          ) : (
-            <div className="flex flex-wrap gap-2">
-              {customer.preferences.map((p) => (
-                <Badge key={p.id} variant="secondary">
-                  {PREFERENCE_LABEL[p.type]}: {p.label}
-                </Badge>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Subscription history</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <EmptyState
-            icon={CalendarClock}
-            title="Not available yet"
-            description="Available once the subscription module ships."
+          <CustomerPreferencesManager
+            customerProfileId={customer.id}
+            preferences={customer.preferences}
           />
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle>Feedback</CardTitle>
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <CardTitle>Weekly meal plan</CardTitle>
+              <CardDescription>
+                {weekStartDate.toLocaleDateString()} – {weekEndDate.toLocaleDateString()}
+              </CardDescription>
+            </div>
+            <div className="flex gap-2">
+              <Button asChild variant="outline" size="sm">
+                <Link href={`?week=${weekOffset - 1}`}>
+                  <ChevronLeft className="size-4" />
+                  Previous
+                </Link>
+              </Button>
+              <Button asChild variant="outline" size="sm">
+                <Link href={`?week=${weekOffset + 1}`}>
+                  Next
+                  <ChevronRight className="size-4" />
+                </Link>
+              </Button>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
-          <EmptyState
-            icon={MessageSquare}
-            title="Not available yet"
-            description="Available once ratings ship."
+          <CustomerMealPlanner
+            customerProfileId={customer.id}
+            weekStartDate={weekStartDate.toISOString()}
+            meals={meals}
+            selections={selections.map((s) => ({
+              dayOfWeek: s.dayOfWeek,
+              mealSlot: s.mealSlot,
+              mealId: s.mealId,
+              note: s.note,
+            }))}
           />
         </CardContent>
       </Card>
