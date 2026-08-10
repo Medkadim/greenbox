@@ -6,3 +6,7 @@ export function listDrivers() {
     orderBy: { createdAt: "desc" },
   });
 }
+
+export function getDriverByUserId(userId: string) {
+  return db.driver.findUnique({ where: { userId } });
+}

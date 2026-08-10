@@ -6,7 +6,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { DeliveryCard } from "@/components/delivery/delivery-card";
 import { GenerateDeliveriesButton } from "@/components/delivery/generate-deliveries-button";
 import { getTodayDeliveries } from "@/lib/data/delivery";
-import { listDrivers } from "@/lib/data/driver";
+import { listDrivers, getDriverByUserId } from "@/lib/data/driver";
 import { getServerSession, getUserRole } from "@/lib/session";
 import { MEAL_SLOTS, SLOT_LABEL } from "@/lib/weekly-menu-constants";
 
@@ -14,8 +14,10 @@ export default async function DeliveryDashboardPage() {
   const session = await getServerSession();
   const isAdmin = getUserRole(session!.user) === "ADMIN";
 
+  const ownDriver = isAdmin ? null : await getDriverByUserId(session!.user.id);
+
   const [deliveries, drivers] = await Promise.all([
-    getTodayDeliveries(),
+    isAdmin ? getTodayDeliveries() : getTodayDeliveries(ownDriver?.id ?? "__none__"),
     isAdmin ? listDrivers() : Promise.resolve([]),
   ]);
   const driverOptions = drivers.map((d) => ({
