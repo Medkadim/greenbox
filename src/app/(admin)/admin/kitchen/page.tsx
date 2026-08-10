@@ -1,28 +1,62 @@
-import { ChefHat } from "lucide-react";
+import Link from "next/link";
+import { ChefHat, ChevronLeft, ChevronRight } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { MealProductionCard } from "@/components/kitchen/meal-production-card";
+import { KitchenDatePicker } from "@/components/kitchen/kitchen-date-picker";
 import { IngredientRequirements } from "@/components/kitchen/ingredient-requirements";
 import { getDailyProduction } from "@/lib/data/kitchen";
-import { MEAL_SLOTS, SLOT_LABEL } from "@/lib/weekly-menu-constants";
+import {
+  MEAL_SLOTS,
+  SLOT_LABEL,
+  formatDateParam,
+  parseDateParam,
+} from "@/lib/weekly-menu-constants";
 
-export default async function AdminKitchenPage() {
-  const production = await getDailyProduction();
+export default async function AdminKitchenPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ date?: string }>;
+}) {
+  const { date } = await searchParams;
+  const targetDate = parseDateParam(date);
+  const production = await getDailyProduction(targetDate);
   const totalMealsToday = MEAL_SLOTS.reduce(
     (sum, slot) => sum + production.slots[slot].totalMeals,
     0
   );
 
+  const prevDate = new Date(targetDate);
+  prevDate.setDate(prevDate.getDate() - 1);
+  const nextDate = new Date(targetDate);
+  nextDate.setDate(nextDate.getDate() + 1);
+
   return (
     <div className="max-w-3xl space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold">Kitchen — {production.dayLabel}</h1>
-        <p className="text-muted-foreground text-sm">
-          What the kitchen sees: today&apos;s production, plus the
-          ingredient shopping list for the week.
-        </p>
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold">Kitchen — {production.dayLabel}</h1>
+          <p className="text-muted-foreground text-sm">
+            What the kitchen sees: production for the selected day, plus the
+            ingredient shopping list for the week.
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button asChild variant="outline" size="sm">
+            <Link href={`?date=${formatDateParam(prevDate)}`}>
+              <ChevronLeft className="size-4" />
+            </Link>
+          </Button>
+          <KitchenDatePicker date={formatDateParam(targetDate)} />
+          <Button asChild variant="outline" size="sm">
+            <Link href={`?date=${formatDateParam(nextDate)}`}>
+              <ChevronRight className="size-4" />
+            </Link>
+          </Button>
+        </div>
       </div>
 
       {totalMealsToday === 0 ? (
@@ -30,7 +64,7 @@ export default async function AdminKitchenPage() {
           <CardContent className="pt-6">
             <EmptyState
               icon={ChefHat}
-              title="No meals planned for today"
+              title="No meals planned for this day"
               description="Assign meals to customers from a customer's page."
             />
           </CardContent>
