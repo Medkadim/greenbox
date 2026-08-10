@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">GreenBox Driver</string>
+    <string name="title_activity_main">GreenBox Driver</string>
+    <string name="package_name">ma.greenbox.driver</string>
+    <string name="custom_url_scheme">ma.greenbox.driver</string>
+</resources>
