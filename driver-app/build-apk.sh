@@ -7,8 +7,8 @@ cd "$(dirname "$0")"
 
 CMDLINE_TOOLS_URL="https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip"
 SDK_DIR="$(pwd)/android-sdk"
-PLATFORM="android-35"
-BUILD_TOOLS="35.0.0"
+PLATFORM="android-36"
+BUILD_TOOLS="36.0.0"
 
 echo "==> Installing npm dependencies..."
 npm install
