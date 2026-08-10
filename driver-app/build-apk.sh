@@ -17,10 +17,18 @@ echo "==> Syncing Capacitor (regenerates android/capacitor-cordova-android-plugi
 npx cap sync android
 
 echo "==> Checking Java..."
-if ! command -v java >/dev/null 2>&1 || [ "$(java -version 2>&1 | grep -oE '"[0-9]+' | head -1 | tr -d '"')" -lt 17 ]; then
-  echo "==> Installing OpenJDK 17..."
-  apt-get update -qq && apt-get install -y -qq openjdk-17-jdk-headless
+# Capacitor's Android module targets Java 21 specifically (sourceCompatibility
+# JavaVersion.VERSION_21) — javac can't target a release newer than itself,
+# so anything older (17, etc.) fails with "invalid source release: 21".
+JAVA21_HOME="$(find /usr/lib/jvm -maxdepth 1 -iname 'java-21-openjdk*' 2>/dev/null | head -1)"
+if [ -z "$JAVA21_HOME" ]; then
+  echo "==> Installing OpenJDK 21..."
+  apt-get update -qq && apt-get install -y -qq openjdk-21-jdk-headless
+  JAVA21_HOME="$(find /usr/lib/jvm -maxdepth 1 -iname 'java-21-openjdk*' 2>/dev/null | head -1)"
 fi
+export JAVA_HOME="$JAVA21_HOME"
+export PATH="$JAVA_HOME/bin:$PATH"
+echo "    Using $(java -version 2>&1 | head -1)"
 
 if [ ! -d "$SDK_DIR/cmdline-tools/latest" ]; then
   echo "==> Downloading Android command-line tools (one-time, ~150MB)..."
