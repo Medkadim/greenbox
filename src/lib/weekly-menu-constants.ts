@@ -44,3 +44,19 @@ export function mondayOf(date: Date): Date {
   monday.setDate(monday.getDate() - diff);
   return monday;
 }
+
+// "YYYY-MM-DD" <-> Date, for ?date= query params (local time, not UTC).
+export function formatDateParam(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+export function parseDateParam(value: string | undefined): Date {
+  if (!value) return new Date();
+  const [y, m, d] = value.split("-").map(Number);
+  if (!y || !m || !d) return new Date();
+  const date = new Date(y, m - 1, d);
+  return Number.isNaN(date.getTime()) ? new Date() : date;
+}

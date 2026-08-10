@@ -77,6 +77,11 @@ export function MealProductionCard({ meal }: { meal: ProductionMeal }) {
                         {tag.replaceAll("_", " ").toLowerCase()}
                       </Badge>
                     ))}
+                    {customer.preferences.map((pref, i) => (
+                      <Badge key={i} variant="secondary" className="text-xs">
+                        {pref.type === "AVOID" ? "Avoid" : pref.type === "DISLIKE" ? "Dislikes" : "Likes"}: {pref.label}
+                      </Badge>
+                    ))}
                     {customer.note && (
                       <Badge variant="secondary" className="text-xs">
                         {customer.note}

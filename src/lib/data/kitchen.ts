@@ -7,6 +7,7 @@ export type ProductionCustomer = {
   note: string | null;
   allergies: { name: string; notes: string | null }[];
   otherAllergies: string | null;
+  preferences: { type: string; label: string }[];
   tags: string[];
 };
 
@@ -33,17 +34,20 @@ const selectionWithMeal = {
       },
     },
     customerProfile: {
-      include: { allergies: { include: { allergy: true } }, tags: true },
+      include: {
+        allergies: { include: { allergy: true } },
+        preferences: true,
+        tags: true,
+      },
     },
   },
 } satisfies Prisma.CustomerMealSelectionDefaultArgs;
 
 type SelectionWithMeal = Prisma.CustomerMealSelectionGetPayload<typeof selectionWithMeal>;
 
-export async function getDailyProduction(): Promise<DailyProduction> {
-  const today = new Date();
-  const dayOfWeek = dayOfWeekFromDate(today);
-  const weekStartDate = mondayOf(today);
+export async function getDailyProduction(date: Date = new Date()): Promise<DailyProduction> {
+  const dayOfWeek = dayOfWeekFromDate(date);
+  const weekStartDate = mondayOf(date);
 
   const selections = await db.customerMealSelection.findMany({
     where: {
@@ -74,6 +78,7 @@ export async function getDailyProduction(): Promise<DailyProduction> {
           notes: a.notes,
         })),
         otherAllergies: profile.otherAllergies,
+        preferences: profile.preferences.map((p) => ({ type: p.type, label: p.label })),
         tags: profile.tags.map((t) => t.tag),
       };
 
@@ -109,7 +114,7 @@ export async function getDailyProduction(): Promise<DailyProduction> {
   }
 
   return {
-    dayLabel: today.toLocaleDateString(undefined, {
+    dayLabel: date.toLocaleDateString(undefined, {
       weekday: "long",
       day: "numeric",
       month: "long",
