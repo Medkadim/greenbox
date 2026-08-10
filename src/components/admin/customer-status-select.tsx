@@ -33,7 +33,11 @@ export function CustomerStatusSelect({
   function onChange(value: string) {
     startTransition(async () => {
       try {
-        await adminSetCustomerStatus(customerProfileId, value as CustomerStatus);
+        const result = await adminSetCustomerStatus(customerProfileId, value as CustomerStatus);
+        if (result?.error) {
+          toast.error(result.error);
+          return;
+        }
         router.refresh();
       } catch {
         toast.error("Could not update status.");

@@ -8,6 +8,7 @@ import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { requireAdmin } from "@/lib/auth-guards";
 import { phoneToLocalEmail } from "@/lib/phone-identity";
+import { parseInput } from "@/lib/parse-input";
 import {
   adminCreateDriverSchema,
   type AdminCreateDriverInput,
@@ -17,7 +18,9 @@ export async function adminCreateDriver(
   input: AdminCreateDriverInput
 ): Promise<{ error: string } | void> {
   await requireAdmin();
-  const data = adminCreateDriverSchema.parse(input);
+  const parsed = parseInput(adminCreateDriverSchema, input);
+  if (!parsed.success) return { error: parsed.error };
+  const data = parsed.data;
 
   let userId: string;
   try {

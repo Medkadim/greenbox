@@ -21,7 +21,11 @@ export function IngredientForm() {
   function onSubmit(values: IngredientInput) {
     startTransition(async () => {
       try {
-        await createIngredient(values);
+        const result = await createIngredient(values);
+        if (result?.error) {
+          toast.error(result.error);
+          return;
+        }
         form.reset({ name: "", unit: values.unit });
         toast.success("Ingredient added.");
         router.refresh();

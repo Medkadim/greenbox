@@ -47,7 +47,7 @@ export function CustomerAllergiesForm({
     event.preventDefault();
     startTransition(async () => {
       try {
-        await adminUpdateCustomerAllergies(customerProfileId, {
+        const result = await adminUpdateCustomerAllergies(customerProfileId, {
           allergies: allergies.map((allergy) => ({
             allergyId: allergy.id,
             checked: state[allergy.id]?.checked ?? false,
@@ -55,6 +55,10 @@ export function CustomerAllergiesForm({
           })),
           otherAllergies: other,
         });
+        if (result?.error) {
+          toast.error(result.error);
+          return;
+        }
         toast.success("Allergies updated.");
         router.refresh();
       } catch {

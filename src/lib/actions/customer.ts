@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth-guards";
 import { Prisma } from "@/generated/prisma/client";
+import { parseInput } from "@/lib/parse-input";
 import {
   customerProfileSchema,
   customerStatusEnum,
@@ -42,11 +43,12 @@ export async function adminCreateCustomer(
   input: CustomerProfileInput
 ): Promise<{ error: string } | { id: string }> {
   await requireAdmin();
-  const data = customerProfileSchema.parse(input);
+  const parsed = parseInput(customerProfileSchema, input);
+  if (!parsed.success) return { error: parsed.error };
 
   let profile;
   try {
-    profile = await db.customerProfile.create({ data: profileData(data) });
+    profile = await db.customerProfile.create({ data: profileData(parsed.data) });
   } catch (error) {
     if (
       error instanceof Prisma.PrismaClientKnownRequestError &&
@@ -70,12 +72,13 @@ export async function adminUpdateCustomerProfile(
   input: CustomerProfileInput
 ): Promise<{ error: string } | void> {
   await requireAdmin();
-  const data = customerProfileSchema.parse(input);
+  const parsed = parseInput(customerProfileSchema, input);
+  if (!parsed.success) return { error: parsed.error };
 
   try {
     await db.customerProfile.update({
       where: { id: customerProfileId },
-      data: profileData(data),
+      data: profileData(parsed.data),
     });
   } catch (error) {
     if (
@@ -94,13 +97,14 @@ export async function adminUpdateCustomerProfile(
 export async function adminSetCustomerStatus(
   customerProfileId: string,
   status: CustomerStatusInput
-) {
+): Promise<{ error: string } | void> {
   await requireAdmin();
-  const data = customerStatusEnum.parse(status);
+  const parsed = parseInput(customerStatusEnum, status);
+  if (!parsed.success) return { error: parsed.error };
 
   await db.customerProfile.update({
     where: { id: customerProfileId },
-    data: { status: data },
+    data: { status: parsed.data },
   });
 
   revalidatePath(`/admin/customers/${customerProfileId}`);
@@ -110,12 +114,13 @@ export async function adminSetCustomerStatus(
 export async function adminAddCustomerPreference(
   customerProfileId: string,
   input: CustomerPreferenceInput
-) {
+): Promise<{ error: string } | void> {
   await requireAdmin();
-  const data = customerPreferenceSchema.parse(input);
+  const parsed = parseInput(customerPreferenceSchema, input);
+  if (!parsed.success) return { error: parsed.error };
 
   await db.customerPreference.create({
-    data: { customerProfileId, type: data.type, label: data.label },
+    data: { customerProfileId, type: parsed.data.type, label: parsed.data.label },
   });
 
   revalidatePath(`/admin/customers/${customerProfileId}`);
@@ -137,9 +142,11 @@ export async function adminDeleteCustomerPreference(
 export async function adminUpdateCustomerAllergies(
   customerProfileId: string,
   input: CustomerAllergiesInput
-) {
+): Promise<{ error: string } | void> {
   await requireAdmin();
-  const data = customerAllergiesSchema.parse(input);
+  const parsed = parseInput(customerAllergiesSchema, input);
+  if (!parsed.success) return { error: parsed.error };
+  const data = parsed.data;
 
   await db.$transaction([
     ...data.allergies.map(({ allergyId, checked, notes }) =>

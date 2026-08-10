@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { db } from "@/lib/db";
 import { requireDeliveryStaff } from "@/lib/auth-guards";
+import { parseInput } from "@/lib/parse-input";
 import {
   updateDeliveryStatusSchema,
   type UpdateDeliveryStatusInput,
@@ -49,9 +50,13 @@ export async function generateTodayDeliveries() {
   revalidatePath("/delivery");
 }
 
-export async function updateDeliveryStatus(input: UpdateDeliveryStatusInput) {
+export async function updateDeliveryStatus(
+  input: UpdateDeliveryStatusInput
+): Promise<{ error: string } | void> {
   await requireDeliveryStaff();
-  const data = updateDeliveryStatusSchema.parse(input);
+  const parsed = parseInput(updateDeliveryStatusSchema, input);
+  if (!parsed.success) return { error: parsed.error };
+  const data = parsed.data;
 
   await db.delivery.update({
     where: { id: data.deliveryId },

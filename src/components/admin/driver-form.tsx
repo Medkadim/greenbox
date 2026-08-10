@@ -3,10 +3,11 @@
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 
 import { adminCreateDriver } from "@/lib/actions/driver";
-import type { AdminCreateDriverInput } from "@/lib/validations/driver";
+import { adminCreateDriverSchema, type AdminCreateDriverInput } from "@/lib/validations/driver";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,7 +23,10 @@ export function DriverForm() {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
-  const form = useForm<AdminCreateDriverInput>({ defaultValues: EMPTY });
+  const form = useForm<AdminCreateDriverInput>({
+    resolver: zodResolver(adminCreateDriverSchema),
+    defaultValues: EMPTY,
+  });
 
   function onSubmit(values: AdminCreateDriverInput) {
     startTransition(async () => {
@@ -43,6 +47,11 @@ export function DriverForm() {
         <div className="space-y-2">
           <Label htmlFor="driver-name">Full name</Label>
           <Input id="driver-name" required {...form.register("name")} />
+          {form.formState.errors.name && (
+            <p className="text-destructive text-sm">
+              {form.formState.errors.name.message}
+            </p>
+          )}
         </div>
         <div className="space-y-2">
           <Label htmlFor="driver-phoneNumber">Phone number</Label>
@@ -52,6 +61,11 @@ export function DriverForm() {
             required
             {...form.register("phoneNumber")}
           />
+          {form.formState.errors.phoneNumber && (
+            <p className="text-destructive text-sm">
+              {form.formState.errors.phoneNumber.message}
+            </p>
+          )}
         </div>
         <div className="space-y-2">
           <Label htmlFor="driver-password">Password</Label>
@@ -62,6 +76,11 @@ export function DriverForm() {
             required
             {...form.register("password")}
           />
+          {form.formState.errors.password && (
+            <p className="text-destructive text-sm">
+              {form.formState.errors.password.message}
+            </p>
+          )}
         </div>
         <div className="space-y-2">
           <Label htmlFor="driver-vehicleInfo">Vehicle</Label>

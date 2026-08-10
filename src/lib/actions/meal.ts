@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { db } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth-guards";
+import { parseInput } from "@/lib/parse-input";
 import {
   ingredientSchema,
   mealSchema,
@@ -13,18 +14,25 @@ import {
   type RecipeInput,
 } from "@/lib/validations/meal";
 
-export async function createIngredient(input: IngredientInput) {
+export async function createIngredient(
+  input: IngredientInput
+): Promise<{ error: string } | void> {
   await requireAdmin();
-  const data = ingredientSchema.parse(input);
+  const parsed = parseInput(ingredientSchema, input);
+  if (!parsed.success) return { error: parsed.error };
 
-  await db.ingredient.create({ data });
+  await db.ingredient.create({ data: parsed.data });
 
   revalidatePath("/admin/ingredients");
 }
 
-export async function createMeal(input: MealInput) {
+export async function createMeal(
+  input: MealInput
+): Promise<{ error: string } | { id: string }> {
   await requireAdmin();
-  const data = mealSchema.parse(input);
+  const parsed = parseInput(mealSchema, input);
+  if (!parsed.success) return { error: parsed.error };
+  const data = parsed.data;
 
   const meal = await db.meal.create({
     data: {
@@ -42,12 +50,17 @@ export async function createMeal(input: MealInput) {
 
   revalidatePath("/admin/meals");
 
-  return meal.id;
+  return { id: meal.id };
 }
 
-export async function updateMeal(mealId: string, input: MealInput) {
+export async function updateMeal(
+  mealId: string,
+  input: MealInput
+): Promise<{ error: string } | void> {
   await requireAdmin();
-  const data = mealSchema.parse(input);
+  const parsed = parseInput(mealSchema, input);
+  if (!parsed.success) return { error: parsed.error };
+  const data = parsed.data;
 
   await db.meal.update({
     where: { id: mealId },
@@ -76,9 +89,14 @@ export async function toggleMealActive(mealId: string, isActive: boolean) {
   revalidatePath("/admin/meals");
 }
 
-export async function upsertRecipe(mealId: string, input: RecipeInput) {
+export async function upsertRecipe(
+  mealId: string,
+  input: RecipeInput
+): Promise<{ error: string } | void> {
   await requireAdmin();
-  const data = recipeSchema.parse(input);
+  const parsed = parseInput(recipeSchema, input);
+  if (!parsed.success) return { error: parsed.error };
+  const data = parsed.data;
 
   await db.$transaction(async (tx) => {
     const recipe = await tx.recipe.upsert({
