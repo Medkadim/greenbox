@@ -53,7 +53,11 @@ export function CustomerPreferencesManager({
   function onSubmit(values: CustomerPreferenceInput) {
     startTransition(async () => {
       try {
-        await adminAddCustomerPreference(customerProfileId, values);
+        const result = await adminAddCustomerPreference(customerProfileId, values);
+        if (result?.error) {
+          toast.error(result.error);
+          return;
+        }
         form.reset({ type: values.type, label: "" });
         toast.success("Preference added.");
         router.refresh();

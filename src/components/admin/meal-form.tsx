@@ -100,13 +100,21 @@ export function MealForm({ meal }: { meal?: Meal }) {
     startTransition(async () => {
       try {
         if (meal) {
-          await updateMeal(meal.id, values);
+          const result = await updateMeal(meal.id, values);
+          if (result?.error) {
+            toast.error(result.error);
+            return;
+          }
           toast.success("Meal updated.");
           router.refresh();
         } else {
-          const id = await createMeal(values);
+          const result = await createMeal(values);
+          if ("error" in result) {
+            toast.error(result.error);
+            return;
+          }
           toast.success("Meal created. Now add its recipe below.");
-          router.push(`/admin/meals/${id}`);
+          router.push(`/admin/meals/${result.id}`);
         }
       } catch {
         toast.error("Could not save the meal.");

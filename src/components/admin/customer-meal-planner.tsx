@@ -58,22 +58,25 @@ export function CustomerMealPlanner({
     const key = `${day}-${slot}`;
     startTransition(async () => {
       try {
-        if (mealId === NONE) {
-          await clearCustomerMealSelection({
-            customerProfileId,
-            weekStartDate: weekStartDateValue,
-            dayOfWeek: day,
-            mealSlot: slot,
-          });
-        } else {
-          await setCustomerMealSelection({
-            customerProfileId,
-            weekStartDate: weekStartDateValue,
-            dayOfWeek: day,
-            mealSlot: slot,
-            mealId,
-            note: notes[key] ?? "",
-          });
+        const result =
+          mealId === NONE
+            ? await clearCustomerMealSelection({
+                customerProfileId,
+                weekStartDate: weekStartDateValue,
+                dayOfWeek: day,
+                mealSlot: slot,
+              })
+            : await setCustomerMealSelection({
+                customerProfileId,
+                weekStartDate: weekStartDateValue,
+                dayOfWeek: day,
+                mealSlot: slot,
+                mealId,
+                note: notes[key] ?? "",
+              });
+        if (result?.error) {
+          toast.error(result.error);
+          return;
         }
         router.refresh();
       } catch {
@@ -91,7 +94,7 @@ export function CustomerMealPlanner({
 
     startTransition(async () => {
       try {
-        await setCustomerMealSelection({
+        const result = await setCustomerMealSelection({
           customerProfileId,
           weekStartDate: weekStartDateValue,
           dayOfWeek: day,
@@ -99,6 +102,10 @@ export function CustomerMealPlanner({
           mealId: existing.mealId,
           note,
         });
+        if (result?.error) {
+          toast.error(result.error);
+          return;
+        }
         router.refresh();
       } catch {
         toast.error("Could not save the remark.");

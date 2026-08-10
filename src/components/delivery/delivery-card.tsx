@@ -93,7 +93,11 @@ export function DeliveryCard({
   function setStatus(next: DeliveryStatus) {
     startTransition(async () => {
       try {
-        await updateDeliveryStatus({ deliveryId, status: next });
+        const result = await updateDeliveryStatus({ deliveryId, status: next });
+        if (result?.error) {
+          toast.error(result.error);
+          return;
+        }
         router.refresh();
       } catch {
         toast.error("Could not update the delivery.");

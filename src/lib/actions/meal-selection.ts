@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { db } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth-guards";
+import { parseInput } from "@/lib/parse-input";
 import {
   setMealSelectionSchema,
   clearMealSelectionSchema,
@@ -11,9 +12,13 @@ import {
   type ClearMealSelectionInput,
 } from "@/lib/validations/meal-selection";
 
-export async function setCustomerMealSelection(input: SetMealSelectionInput) {
+export async function setCustomerMealSelection(
+  input: SetMealSelectionInput
+): Promise<{ error: string } | void> {
   await requireAdmin();
-  const data = setMealSelectionSchema.parse(input);
+  const parsed = parseInput(setMealSelectionSchema, input);
+  if (!parsed.success) return { error: parsed.error };
+  const data = parsed.data;
 
   await db.customerMealSelection.upsert({
     where: {
@@ -43,9 +48,13 @@ export async function setCustomerMealSelection(input: SetMealSelectionInput) {
   revalidatePath("/admin/kitchen");
 }
 
-export async function clearCustomerMealSelection(input: ClearMealSelectionInput) {
+export async function clearCustomerMealSelection(
+  input: ClearMealSelectionInput
+): Promise<{ error: string } | void> {
   await requireAdmin();
-  const data = clearMealSelectionSchema.parse(input);
+  const parsed = parseInput(clearMealSelectionSchema, input);
+  if (!parsed.success) return { error: parsed.error };
+  const data = parsed.data;
 
   await db.customerMealSelection.deleteMany({
     where: {

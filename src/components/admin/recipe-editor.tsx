@@ -76,7 +76,11 @@ export function RecipeEditor({
 
     startTransition(async () => {
       try {
-        await upsertRecipe(mealId, { instructions, ingredients: rows });
+        const result = await upsertRecipe(mealId, { instructions, ingredients: rows });
+        if (result?.error) {
+          toast.error(result.error);
+          return;
+        }
         toast.success("Recipe saved.");
         router.refresh();
       } catch {

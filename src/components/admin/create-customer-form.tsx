@@ -3,10 +3,11 @@
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 
 import { adminCreateCustomer } from "@/lib/actions/customer";
-import type { CustomerProfileInput } from "@/lib/validations/customer";
+import { customerProfileSchema, type CustomerProfileInput } from "@/lib/validations/customer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -29,7 +30,10 @@ export function CreateCustomerForm() {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
-  const form = useForm<CustomerProfileInput>({ defaultValues: EMPTY });
+  const form = useForm<CustomerProfileInput>({
+    resolver: zodResolver(customerProfileSchema),
+    defaultValues: EMPTY,
+  });
 
   function onSubmit(values: CustomerProfileInput) {
     startTransition(async () => {
@@ -50,10 +54,20 @@ export function CreateCustomerForm() {
         <div className="space-y-2">
           <Label htmlFor="customer-firstName">First name</Label>
           <Input id="customer-firstName" required {...form.register("firstName")} />
+          {form.formState.errors.firstName && (
+            <p className="text-destructive text-sm">
+              {form.formState.errors.firstName.message}
+            </p>
+          )}
         </div>
         <div className="space-y-2">
           <Label htmlFor="customer-lastName">Last name</Label>
           <Input id="customer-lastName" required {...form.register("lastName")} />
+          {form.formState.errors.lastName && (
+            <p className="text-destructive text-sm">
+              {form.formState.errors.lastName.message}
+            </p>
+          )}
         </div>
         <div className="space-y-2">
           <Label htmlFor="customer-phoneNumber">Phone number</Label>
@@ -63,6 +77,11 @@ export function CreateCustomerForm() {
             required
             {...form.register("phoneNumber")}
           />
+          {form.formState.errors.phoneNumber && (
+            <p className="text-destructive text-sm">
+              {form.formState.errors.phoneNumber.message}
+            </p>
+          )}
         </div>
         <div className="space-y-2">
           <Label htmlFor="customer-address">Address</Label>
