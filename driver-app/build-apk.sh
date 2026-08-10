@@ -10,6 +10,12 @@ SDK_DIR="$(pwd)/android-sdk"
 PLATFORM="android-35"
 BUILD_TOOLS="35.0.0"
 
+echo "==> Installing npm dependencies..."
+npm install
+
+echo "==> Syncing Capacitor (regenerates android/capacitor-cordova-android-plugins, gitignored on purpose)..."
+npx cap sync android
+
 echo "==> Checking Java..."
 if ! command -v java >/dev/null 2>&1 || [ "$(java -version 2>&1 | grep -oE '"[0-9]+' | head -1 | tr -d '"')" -lt 17 ]; then
   echo "==> Installing OpenJDK 17..."
