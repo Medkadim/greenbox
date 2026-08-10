@@ -1,0 +1,12 @@
+{
+  "appId": "ma.greenbox.driver",
+  "appName": "GreenBox Driver",
+  "webDir": "www",
+  "server": {
+    "url": "http://62.238.60.178:3000/login",
+    "cleartext": true
+  },
+  "android": {
+    "allowMixedContent": true
+  }
+}
