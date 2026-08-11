@@ -2,8 +2,12 @@ import { db } from "@/lib/db";
 import { dayOfWeekFromDate, mondayOf, MEAL_SLOTS } from "@/lib/weekly-menu-constants";
 import type { MealSlot, Prisma } from "@/generated/prisma/client";
 
-export type ProductionCustomer = {
-  name: string;
+export type OrderTicket = {
+  customerName: string;
+  mealId: string;
+  mealName: string;
+  deliveryTimeStart: string | null;
+  deliveryTimeEnd: string | null;
   note: string | null;
   allergies: { name: string; notes: string | null }[];
   otherAllergies: string | null;
@@ -11,19 +15,18 @@ export type ProductionCustomer = {
   tags: string[];
 };
 
-export type ProductionMeal = {
+export type MealSummary = {
   mealId: string;
   mealName: string;
   portions: number;
   instructions: string | null;
   ingredients: { name: string; quantity: number; unit: string }[];
-  customers: ProductionCustomer[];
   hasAllergyAlert: boolean;
 };
 
 export type DailyProduction = {
   dayLabel: string;
-  slots: Record<MealSlot, { totalMeals: number; meals: ProductionMeal[] }>;
+  slots: Record<MealSlot, { totalMeals: number; tickets: OrderTicket[]; meals: MealSummary[] }>;
 };
 
 const selectionWithMeal = {
@@ -43,7 +46,14 @@ const selectionWithMeal = {
   },
 } satisfies Prisma.CustomerMealSelectionDefaultArgs;
 
-type SelectionWithMeal = Prisma.CustomerMealSelectionGetPayload<typeof selectionWithMeal>;
+function sortByDeliveryTime(a: OrderTicket, b: OrderTicket) {
+  if (a.deliveryTimeStart && b.deliveryTimeStart) {
+    return a.deliveryTimeStart.localeCompare(b.deliveryTimeStart);
+  }
+  if (a.deliveryTimeStart) return -1;
+  if (b.deliveryTimeStart) return 1;
+  return a.customerName.localeCompare(b.customerName);
+}
 
 export async function getDailyProduction(date: Date = new Date()): Promise<DailyProduction> {
   const dayOfWeek = dayOfWeekFromDate(date);
@@ -59,19 +69,23 @@ export async function getDailyProduction(date: Date = new Date()): Promise<Daily
   });
 
   const slots = Object.fromEntries(
-    MEAL_SLOTS.map((slot) => [slot, { totalMeals: 0, meals: [] as ProductionMeal[] }])
+    MEAL_SLOTS.map((slot) => [
+      slot,
+      { totalMeals: 0, tickets: [] as OrderTicket[], meals: [] as MealSummary[] },
+    ])
   ) as DailyProduction["slots"];
 
   for (const slot of MEAL_SLOTS) {
-    const byMeal = new Map<
-      string,
-      { meal: SelectionWithMeal["meal"]; customers: ProductionCustomer[] }
-    >();
+    const slotSelections = selections.filter((s) => s.mealSlot === slot);
 
-    for (const selection of selections.filter((s) => s.mealSlot === slot)) {
+    const tickets: OrderTicket[] = slotSelections.map((selection) => {
       const profile = selection.customerProfile;
-      const customer: ProductionCustomer = {
-        name: `${profile.firstName} ${profile.lastName}`,
+      return {
+        customerName: `${profile.firstName} ${profile.lastName}`,
+        mealId: selection.meal.id,
+        mealName: selection.meal.name,
+        deliveryTimeStart: profile.preferredDeliveryStart,
+        deliveryTimeEnd: profile.preferredDeliveryEnd,
         note: selection.note,
         allergies: profile.allergies.map((a) => ({
           name: a.allergy.name,
@@ -81,36 +95,34 @@ export async function getDailyProduction(date: Date = new Date()): Promise<Daily
         preferences: profile.preferences.map((p) => ({ type: p.type, label: p.label })),
         tags: profile.tags.map((t) => t.tag),
       };
+    });
+    tickets.sort(sortByDeliveryTime);
 
-      const entry = byMeal.get(selection.meal.id) ?? { meal: selection.meal, customers: [] };
-      entry.customers.push(customer);
+    const byMeal = new Map<string, { meal: (typeof slotSelections)[number]["meal"]; portions: number }>();
+    for (const selection of slotSelections) {
+      const entry = byMeal.get(selection.meal.id) ?? { meal: selection.meal, portions: 0 };
+      entry.portions += 1;
       byMeal.set(selection.meal.id, entry);
     }
 
-    const meals: ProductionMeal[] = Array.from(byMeal.entries()).map(
-      ([mealId, { meal, customers }]) => ({
-        mealId,
-        mealName: meal.name,
-        portions: customers.length,
-        instructions: meal.recipe?.instructions ?? null,
-        ingredients:
-          meal.recipe?.ingredients.map((ri) => ({
-            name: ri.ingredient.name,
-            quantity: ri.quantity,
-            unit: ri.unit,
-          })) ?? [],
-        customers,
-        hasAllergyAlert: customers.some(
-          (c) => c.allergies.length > 0 || Boolean(c.otherAllergies)
-        ),
-      })
-    );
-
+    const meals: MealSummary[] = Array.from(byMeal.entries()).map(([mealId, { meal, portions }]) => ({
+      mealId,
+      mealName: meal.name,
+      portions,
+      instructions: meal.recipe?.instructions ?? null,
+      ingredients:
+        meal.recipe?.ingredients.map((ri) => ({
+          name: ri.ingredient.name,
+          quantity: ri.quantity,
+          unit: ri.unit,
+        })) ?? [],
+      hasAllergyAlert: tickets.some(
+        (t) => t.mealId === mealId && (t.allergies.length > 0 || Boolean(t.otherAllergies))
+      ),
+    }));
     meals.sort((a, b) => b.portions - a.portions);
-    slots[slot] = {
-      totalMeals: meals.reduce((sum, m) => sum + m.portions, 0),
-      meals,
-    };
+
+    slots[slot] = { totalMeals: tickets.length, tickets, meals };
   }
 
   return {

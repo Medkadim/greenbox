@@ -15,6 +15,10 @@ export function getTodayDeliveries(driverId?: string) {
       customerProfile: true,
       customerMealSelection: { include: { meal: true } },
     },
-    orderBy: [{ mealSlot: "asc" }, { createdAt: "asc" }],
+    orderBy: [
+      { mealSlot: "asc" },
+      { preferredTimeStart: { sort: "asc", nulls: "last" } },
+      { createdAt: "asc" },
+    ],
   });
 }
