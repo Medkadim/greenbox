@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
+import { OrderTicket } from "@/components/kitchen/order-ticket";
 import { MealProductionCard } from "@/components/kitchen/meal-production-card";
 import { KitchenDatePicker } from "@/components/kitchen/kitchen-date-picker";
 import { IngredientRequirements } from "@/components/kitchen/ingredient-requirements";
@@ -40,8 +41,8 @@ export default async function AdminKitchenPage({
         <div>
           <h1 className="text-2xl font-semibold">Kitchen — {production.dayLabel}</h1>
           <p className="text-muted-foreground text-sm">
-            What the kitchen sees: production for the selected day, plus the
-            ingredient shopping list for the week.
+            One ticket per order, in delivery-time order, plus the weekly
+            ingredient shopping list.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -70,22 +71,37 @@ export default async function AdminKitchenPage({
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-6">
+        <div className="space-y-8">
           {MEAL_SLOTS.map((slot) => {
-            const { totalMeals, meals } = production.slots[slot];
-            if (meals.length === 0) return null;
+            const { totalMeals, tickets, meals } = production.slots[slot];
+            if (tickets.length === 0) return null;
 
             return (
-              <div key={slot} className="space-y-3">
+              <div key={slot} className="space-y-4">
                 <div className="flex items-center gap-3">
                   <h2 className="text-lg font-semibold">{SLOT_LABEL[slot]}</h2>
-                  <Badge variant="secondary">{totalMeals} meals</Badge>
+                  <Badge variant="secondary">{totalMeals} orders</Badge>
                 </div>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  {meals.map((meal) => (
-                    <MealProductionCard key={meal.mealId} meal={meal} />
+
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {tickets.map((ticket, index) => (
+                    <OrderTicket
+                      key={`${ticket.mealId}-${ticket.customerName}-${index}`}
+                      ticket={ticket}
+                    />
                   ))}
                 </div>
+
+                <details className="text-sm">
+                  <summary className="text-muted-foreground cursor-pointer select-none">
+                    Recipe reference for {SLOT_LABEL[slot].toLowerCase()} ({meals.length} meals)
+                  </summary>
+                  <div className="mt-3 grid gap-4 sm:grid-cols-2">
+                    {meals.map((meal) => (
+                      <MealProductionCard key={meal.mealId} meal={meal} />
+                    ))}
+                  </div>
+                </details>
               </div>
             );
           })}
