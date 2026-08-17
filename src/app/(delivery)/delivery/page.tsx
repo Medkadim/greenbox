@@ -4,20 +4,34 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { DeliveryCard } from "@/components/delivery/delivery-card";
+import { DriverFilterSelect } from "@/components/delivery/driver-filter-select";
 import { GenerateDeliveriesButton } from "@/components/delivery/generate-deliveries-button";
 import { getTodayDeliveries } from "@/lib/data/delivery";
 import { listDrivers, getDriverByUserId } from "@/lib/data/driver";
 import { getServerSession, getUserRole } from "@/lib/session";
 import { MEAL_SLOTS, SLOT_LABEL } from "@/lib/weekly-menu-constants";
 
-export default async function DeliveryDashboardPage() {
+export default async function DeliveryDashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ driver?: string }>;
+}) {
   const session = await getServerSession();
   const isAdmin = getUserRole(session!.user) === "ADMIN";
+  const { driver: driverFilter } = await searchParams;
 
   const ownDriver = isAdmin ? null : await getDriverByUserId(session!.user.id);
 
   const [deliveries, drivers] = await Promise.all([
-    isAdmin ? getTodayDeliveries() : getTodayDeliveries(ownDriver?.id ?? "__none__"),
+    isAdmin
+      ? getTodayDeliveries(
+          driverFilter === "__unassigned__"
+            ? { unassignedOnly: true }
+            : driverFilter
+              ? { driverId: driverFilter }
+              : undefined
+        )
+      : getTodayDeliveries({ driverId: ownDriver?.id ?? "__none__" }),
     isAdmin ? listDrivers() : Promise.resolve([]),
   ]);
   const driverOptions = drivers.map((d) => ({
@@ -27,15 +41,20 @@ export default async function DeliveryDashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold">Today&apos;s deliveries</h1>
           <p className="text-muted-foreground text-sm">
-            Customer address, GPS location, preferred time and delivery
-            status.
+            Customer address, phone, GPS location, preferred time and
+            delivery status.
           </p>
         </div>
-        <GenerateDeliveriesButton />
+        <div className="flex items-center gap-2">
+          {isAdmin && (
+            <DriverFilterSelect value={driverFilter} drivers={driverOptions} />
+          )}
+          <GenerateDeliveriesButton />
+        </div>
       </div>
 
       {deliveries.length === 0 ? (
@@ -43,8 +62,8 @@ export default async function DeliveryDashboardPage() {
           <CardContent className="pt-6">
             <EmptyState
               icon={Truck}
-              title="No deliveries yet"
-              description="Click Refresh deliveries to pull in today's active subscribers."
+              title="No deliveries"
+              description="Click Refresh deliveries to pull in today's active customers, or try a different driver filter."
             />
           </CardContent>
         </Card>
