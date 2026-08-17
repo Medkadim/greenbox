@@ -16,6 +16,7 @@ import { CustomerProfileForm } from "@/components/admin/customer-profile-form";
 import { CustomerAllergiesForm } from "@/components/admin/customer-allergies-form";
 import { CustomerPreferencesManager } from "@/components/admin/customer-preferences-manager";
 import { CustomerMealPlanner } from "@/components/admin/customer-meal-planner";
+import { CopyPreviousWeekButton } from "@/components/admin/copy-previous-week-button";
 import { getCustomerProfileById, listAllergies } from "@/lib/data/customer";
 import {
   getCustomerMealSelectionsForWeek,
@@ -135,7 +136,11 @@ export default async function AdminCustomerDetailPage({
                 {weekStartDate.toLocaleDateString()} – {weekEndDate.toLocaleDateString()}
               </CardDescription>
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
+              <CopyPreviousWeekButton
+                customerProfileId={customer.id}
+                weekStartDate={weekStartDate.toISOString()}
+              />
               <Button asChild variant="outline" size="sm">
                 <Link href={`?week=${weekOffset - 1}`}>
                   <ChevronLeft className="size-4" />

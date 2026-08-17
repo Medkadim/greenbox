@@ -129,6 +129,7 @@ export function DeliveryCard({
 
         <div className="text-sm">
           <p>{address}</p>
+          {phoneNumber && <p className="text-muted-foreground">{phoneNumber}</p>}
           {(preferredTimeStart || preferredTimeEnd) && (
             <p className="text-muted-foreground">
               Preferred: {preferredTimeStart ?? "—"} – {preferredTimeEnd ?? "—"}
