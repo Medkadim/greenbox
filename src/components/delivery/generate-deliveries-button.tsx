@@ -5,10 +5,11 @@ import { useRouter } from "next/navigation";
 import { RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 
-import { generateTodayDeliveries } from "@/lib/actions/delivery";
+import { generateDeliveriesForDate } from "@/lib/actions/delivery";
+import { parseDateParam } from "@/lib/weekly-menu-constants";
 import { Button } from "@/components/ui/button";
 
-export function GenerateDeliveriesButton() {
+export function GenerateDeliveriesButton({ date }: { date: string }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
@@ -20,7 +21,7 @@ export function GenerateDeliveriesButton() {
       onClick={() =>
         startTransition(async () => {
           try {
-            await generateTodayDeliveries();
+            await generateDeliveriesForDate(parseDateParam(date));
             router.refresh();
           } catch {
             toast.error("Could not refresh deliveries.");

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 import {
   Select,
@@ -21,13 +21,16 @@ export function DriverFilterSelect({
   drivers: { id: string; name: string }[];
 }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   function onChange(next: string) {
+    const params = new URLSearchParams(searchParams.toString());
     if (next === ALL) {
-      router.push("?");
+      params.delete("driver");
     } else {
-      router.push(`?driver=${next}`);
+      params.set("driver", next);
     }
+    router.push(`?${params.toString()}`);
   }
 
   return (
