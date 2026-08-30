@@ -29,11 +29,25 @@ export async function generateDeliveriesForDate(date: Date) {
     getMealSchedule(),
   ]);
 
+  console.log("[generateDeliveriesForDate]", {
+    date: date.toISOString(),
+    dayStart: dayStart.toISOString(),
+    dayOfWeek,
+    weekStartDate: weekStartDate.toISOString(),
+    activeCustomers: activeCustomers.length,
+    existingSelections: selections.length,
+    scheduleEntries: schedule.length,
+  });
+
+  let created = 0;
+  let skipped = 0;
+
   for (const slot of MEAL_SLOTS) {
     const selectionByCustomer = new Map(
       selections.filter((s) => s.mealSlot === slot).map((s) => [s.customerProfileId, s])
     );
     const scheduled = findScheduledMeal(schedule, dayOfWeek, slot);
+    console.log(`[generateDeliveriesForDate] slot=${slot} scheduled=${scheduled ? scheduled.mealId : "none"}`);
 
     for (const profile of activeCustomers) {
       let selection = selectionByCustomer.get(profile.id);
@@ -62,7 +76,10 @@ export async function generateDeliveriesForDate(date: Date) {
           include: { customerProfile: true },
         });
       }
-      if (!selection) continue;
+      if (!selection) {
+        skipped++;
+        continue;
+      }
 
       await db.delivery.upsert({
         where: { customerMealSelectionId: selection.id },
@@ -79,8 +96,11 @@ export async function generateDeliveriesForDate(date: Date) {
         },
         update: {},
       });
+      created++;
     }
   }
+
+  console.log("[generateDeliveriesForDate] done", { created, skipped });
 
   revalidatePath("/delivery");
 }
