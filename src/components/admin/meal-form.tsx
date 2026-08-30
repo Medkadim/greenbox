@@ -93,10 +93,6 @@ export function MealForm({ meal }: { meal?: Meal }) {
   }
 
   function onSubmit(values: MealInput) {
-    if (!values.photoUrl) {
-      toast.error("Upload a photo before saving.");
-      return;
-    }
     startTransition(async () => {
       try {
         if (meal) {
@@ -145,7 +141,7 @@ export function MealForm({ meal }: { meal?: Meal }) {
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="photo">Photo</Label>
+        <Label htmlFor="photo">Photo (optional)</Label>
         <div className="flex items-center gap-4">
           {photoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element

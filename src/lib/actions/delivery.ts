@@ -5,11 +5,12 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { requireDeliveryStaff } from "@/lib/auth-guards";
 import { parseInput } from "@/lib/parse-input";
+import { getMealSchedule, findScheduledMeal } from "@/lib/data/meal-schedule";
 import {
   updateDeliveryStatusSchema,
   type UpdateDeliveryStatusInput,
 } from "@/lib/validations/delivery";
-import { dayOfWeekFromDate, mondayOf } from "@/lib/weekly-menu-constants";
+import { dayOfWeekFromDate, mondayOf, MEAL_SLOTS } from "@/lib/weekly-menu-constants";
 
 export async function generateTodayDeliveries() {
   await requireDeliveryStaff();
@@ -19,32 +20,66 @@ export async function generateTodayDeliveries() {
   const dayOfWeek = dayOfWeekFromDate(todayStart);
   const weekStartDate = mondayOf(todayStart);
 
-  const selections = await db.customerMealSelection.findMany({
-    where: {
-      weekStartDate,
-      dayOfWeek,
-      customerProfile: { status: "ACTIVE" },
-    },
-    include: { customerProfile: true },
-  });
+  const [selections, activeCustomers, schedule] = await Promise.all([
+    db.customerMealSelection.findMany({
+      where: { weekStartDate, dayOfWeek, customerProfile: { status: "ACTIVE" } },
+      include: { customerProfile: true },
+    }),
+    db.customerProfile.findMany({ where: { status: "ACTIVE" } }),
+    getMealSchedule(),
+  ]);
 
-  for (const selection of selections) {
-    const profile = selection.customerProfile;
-    await db.delivery.upsert({
-      where: { customerMealSelectionId: selection.id },
-      create: {
-        customerMealSelectionId: selection.id,
-        customerProfileId: profile.id,
-        scheduledDate: todayStart,
-        mealSlot: selection.mealSlot,
-        addressSnapshot: profile.address ?? "No address on file",
-        latitude: profile.latitude,
-        longitude: profile.longitude,
-        preferredTimeStart: profile.preferredDeliveryStart,
-        preferredTimeEnd: profile.preferredDeliveryEnd,
-      },
-      update: {},
-    });
+  for (const slot of MEAL_SLOTS) {
+    const selectionByCustomer = new Map(
+      selections.filter((s) => s.mealSlot === slot).map((s) => [s.customerProfileId, s])
+    );
+    const scheduled = findScheduledMeal(schedule, dayOfWeek, slot);
+
+    for (const profile of activeCustomers) {
+      let selection = selectionByCustomer.get(profile.id);
+
+      // No explicit choice for this customer/day/slot — fall back to the
+      // default schedule, materializing a selection row so the Delivery
+      // below has something to point its required FK at.
+      if (!selection && scheduled) {
+        selection = await db.customerMealSelection.upsert({
+          where: {
+            customerProfileId_weekStartDate_dayOfWeek_mealSlot: {
+              customerProfileId: profile.id,
+              weekStartDate,
+              dayOfWeek,
+              mealSlot: slot,
+            },
+          },
+          create: {
+            customerProfileId: profile.id,
+            weekStartDate,
+            dayOfWeek,
+            mealSlot: slot,
+            mealId: scheduled.mealId,
+          },
+          update: {},
+          include: { customerProfile: true },
+        });
+      }
+      if (!selection) continue;
+
+      await db.delivery.upsert({
+        where: { customerMealSelectionId: selection.id },
+        create: {
+          customerMealSelectionId: selection.id,
+          customerProfileId: profile.id,
+          scheduledDate: todayStart,
+          mealSlot: slot,
+          addressSnapshot: profile.address ?? "No address on file",
+          latitude: profile.latitude,
+          longitude: profile.longitude,
+          preferredTimeStart: profile.preferredDeliveryStart,
+          preferredTimeEnd: profile.preferredDeliveryEnd,
+        },
+        update: {},
+      });
+    }
   }
 
   revalidatePath("/delivery");

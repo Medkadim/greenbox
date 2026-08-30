@@ -30,16 +30,24 @@ type Selection = {
   note: string | null;
 };
 
+type ScheduleDefault = {
+  dayOfWeek: DayOfWeek;
+  mealSlot: MealSlot;
+  mealName: string;
+};
+
 export function CustomerMealPlanner({
   customerProfileId,
   weekStartDate,
   meals,
   selections,
+  schedule = [],
 }: {
   customerProfileId: string;
   weekStartDate: string;
   meals: { id: string; name: string }[];
   selections: Selection[];
+  schedule?: ScheduleDefault[];
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -52,6 +60,10 @@ export function CustomerMealPlanner({
 
   function find(day: DayOfWeek, slot: MealSlot) {
     return selections.find((s) => s.dayOfWeek === day && s.mealSlot === slot);
+  }
+
+  function findDefault(day: DayOfWeek, slot: MealSlot) {
+    return schedule.find((s) => s.dayOfWeek === day && s.mealSlot === slot);
   }
 
   function onMealChange(day: DayOfWeek, slot: MealSlot, mealId: string) {
@@ -122,6 +134,7 @@ export function CustomerMealPlanner({
             <div className="grid gap-3 sm:grid-cols-3">
               {MEAL_SLOTS.map((slot) => {
                 const current = find(day, slot);
+                const scheduleDefault = !current ? findDefault(day, slot) : undefined;
                 const key = `${day}-${slot}`;
                 return (
                   <div key={slot} className="space-y-1.5">
@@ -145,6 +158,11 @@ export function CustomerMealPlanner({
                         ))}
                       </SelectContent>
                     </Select>
+                    {scheduleDefault && (
+                      <p className="text-muted-foreground text-xs">
+                        Default: {scheduleDefault.mealName}
+                      </p>
+                    )}
                     {current && (
                       <Input
                         className="h-8 text-xs"

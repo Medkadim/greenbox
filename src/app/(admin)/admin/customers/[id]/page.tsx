@@ -22,6 +22,7 @@ import {
   getCustomerMealSelectionsForWeek,
   listActiveMealsForPlanning,
 } from "@/lib/data/meal-selection";
+import { getMealSchedule } from "@/lib/data/meal-schedule";
 import { mondayOf } from "@/lib/weekly-menu-constants";
 
 export default async function AdminCustomerDetailPage({
@@ -35,10 +36,11 @@ export default async function AdminCustomerDetailPage({
   const { week } = await searchParams;
   const weekOffset = Number.parseInt(week ?? "0", 10) || 0;
 
-  const [customer, allergies, meals] = await Promise.all([
+  const [customer, allergies, meals, schedule] = await Promise.all([
     getCustomerProfileById(id),
     listAllergies(),
     listActiveMealsForPlanning(),
+    getMealSchedule(),
   ]);
 
   if (!customer) notFound();
@@ -166,6 +168,11 @@ export default async function AdminCustomerDetailPage({
               mealSlot: s.mealSlot,
               mealId: s.mealId,
               note: s.note,
+            }))}
+            schedule={schedule.map((s) => ({
+              dayOfWeek: s.dayOfWeek,
+              mealSlot: s.mealSlot,
+              mealName: s.meal.name,
             }))}
           />
         </CardContent>
