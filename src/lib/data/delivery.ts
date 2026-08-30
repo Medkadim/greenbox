@@ -1,14 +1,17 @@
 import { db } from "@/lib/db";
 
-export function getTodayDeliveries(filter?: { driverId?: string; unassignedOnly?: boolean }) {
-  const todayStart = new Date();
-  todayStart.setHours(0, 0, 0, 0);
-  const todayEnd = new Date(todayStart);
-  todayEnd.setDate(todayEnd.getDate() + 1);
+export function getDeliveriesForDate(
+  date: Date,
+  filter?: { driverId?: string; unassignedOnly?: boolean }
+) {
+  const dayStart = new Date(date);
+  dayStart.setHours(0, 0, 0, 0);
+  const dayEnd = new Date(dayStart);
+  dayEnd.setDate(dayEnd.getDate() + 1);
 
   return db.delivery.findMany({
     where: {
-      scheduledDate: { gte: todayStart, lt: todayEnd },
+      scheduledDate: { gte: dayStart, lt: dayEnd },
       ...(filter?.driverId ? { driverId: filter.driverId } : {}),
       ...(filter?.unassignedOnly ? { driverId: null } : {}),
     },

@@ -12,13 +12,13 @@ import {
 } from "@/lib/validations/delivery";
 import { dayOfWeekFromDate, mondayOf, MEAL_SLOTS } from "@/lib/weekly-menu-constants";
 
-export async function generateTodayDeliveries() {
+export async function generateDeliveriesForDate(date: Date) {
   await requireDeliveryStaff();
 
-  const todayStart = new Date();
-  todayStart.setHours(0, 0, 0, 0);
-  const dayOfWeek = dayOfWeekFromDate(todayStart);
-  const weekStartDate = mondayOf(todayStart);
+  const dayStart = new Date(date);
+  dayStart.setHours(0, 0, 0, 0);
+  const dayOfWeek = dayOfWeekFromDate(dayStart);
+  const weekStartDate = mondayOf(dayStart);
 
   const [selections, activeCustomers, schedule] = await Promise.all([
     db.customerMealSelection.findMany({
@@ -69,7 +69,7 @@ export async function generateTodayDeliveries() {
         create: {
           customerMealSelectionId: selection.id,
           customerProfileId: profile.id,
-          scheduledDate: todayStart,
+          scheduledDate: dayStart,
           mealSlot: slot,
           addressSnapshot: profile.address ?? "No address on file",
           latitude: profile.latitude,

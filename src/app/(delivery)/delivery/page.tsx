@@ -1,37 +1,47 @@
-import { Truck } from "lucide-react";
+import Link from "next/link";
+import { ChevronLeft, ChevronRight, Truck } from "lucide-react";
 
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { DeliveryCard } from "@/components/delivery/delivery-card";
 import { DriverFilterSelect } from "@/components/delivery/driver-filter-select";
+import { DeliveryDatePicker } from "@/components/delivery/delivery-date-picker";
 import { GenerateDeliveriesButton } from "@/components/delivery/generate-deliveries-button";
-import { getTodayDeliveries } from "@/lib/data/delivery";
+import { getDeliveriesForDate } from "@/lib/data/delivery";
 import { listDrivers, getDriverByUserId } from "@/lib/data/driver";
 import { getServerSession, getUserRole } from "@/lib/session";
-import { MEAL_SLOTS, SLOT_LABEL } from "@/lib/weekly-menu-constants";
+import {
+  MEAL_SLOTS,
+  SLOT_LABEL,
+  formatDateParam,
+  parseDateParam,
+} from "@/lib/weekly-menu-constants";
 
 export default async function DeliveryDashboardPage({
   searchParams,
 }: {
-  searchParams: Promise<{ driver?: string }>;
+  searchParams: Promise<{ driver?: string; date?: string }>;
 }) {
   const session = await getServerSession();
   const isAdmin = getUserRole(session!.user) === "ADMIN";
-  const { driver: driverFilter } = await searchParams;
+  const { driver: driverFilter, date } = await searchParams;
+  const targetDate = parseDateParam(date);
 
   const ownDriver = isAdmin ? null : await getDriverByUserId(session!.user.id);
 
   const [deliveries, drivers] = await Promise.all([
     isAdmin
-      ? getTodayDeliveries(
+      ? getDeliveriesForDate(
+          targetDate,
           driverFilter === "__unassigned__"
             ? { unassignedOnly: true }
             : driverFilter
               ? { driverId: driverFilter }
               : undefined
         )
-      : getTodayDeliveries({ driverId: ownDriver?.id ?? "__none__" }),
+      : getDeliveriesForDate(targetDate, { driverId: ownDriver?.id ?? "__none__" }),
     isAdmin ? listDrivers() : Promise.resolve([]),
   ]);
   const driverOptions = drivers.map((d) => ({
@@ -39,21 +49,44 @@ export default async function DeliveryDashboardPage({
     name: d.user.name ?? d.user.phoneNumber ?? "Driver",
   }));
 
+  const dayLabel = targetDate.toLocaleDateString(undefined, {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+  });
+  const prevDate = new Date(targetDate);
+  prevDate.setDate(prevDate.getDate() - 1);
+  const nextDate = new Date(targetDate);
+  nextDate.setDate(nextDate.getDate() + 1);
+  const dateQuery = (d: Date) =>
+    driverFilter ? `?date=${formatDateParam(d)}&driver=${driverFilter}` : `?date=${formatDateParam(d)}`;
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold">Today&apos;s deliveries</h1>
+          <h1 className="text-2xl font-semibold">Deliveries — {dayLabel}</h1>
           <p className="text-muted-foreground text-sm">
             Customer address, phone, GPS location, preferred time and
             delivery status.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <Button asChild variant="outline" size="sm">
+            <Link href={dateQuery(prevDate)}>
+              <ChevronLeft className="size-4" />
+            </Link>
+          </Button>
+          <DeliveryDatePicker date={formatDateParam(targetDate)} />
+          <Button asChild variant="outline" size="sm">
+            <Link href={dateQuery(nextDate)}>
+              <ChevronRight className="size-4" />
+            </Link>
+          </Button>
           {isAdmin && (
             <DriverFilterSelect value={driverFilter} drivers={driverOptions} />
           )}
-          <GenerateDeliveriesButton />
+          <GenerateDeliveriesButton date={formatDateParam(targetDate)} />
         </div>
       </div>
 
@@ -63,7 +96,7 @@ export default async function DeliveryDashboardPage({
             <EmptyState
               icon={Truck}
               title="No deliveries"
-              description="Click Refresh deliveries to pull in today's active customers, or try a different driver filter."
+              description="Click Refresh deliveries to pull in this day's active customers, or try a different driver filter."
             />
           </CardContent>
         </Card>
