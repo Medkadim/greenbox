@@ -6,7 +6,7 @@ import { LogOut } from "lucide-react";
 import { authClient } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
 
-export function SignOutButton() {
+export function SignOutButton({ label = "Sign out" }: { label?: string }) {
   const router = useRouter();
 
   return (
@@ -22,7 +22,7 @@ export function SignOutButton() {
       }
     >
       <LogOut />
-      Sign out
+      {label}
     </Button>
   );
 }
