@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
-import { mondayOf } from "@/lib/weekly-menu-constants";
+import { getMealSchedule, findScheduledMeal } from "@/lib/data/meal-schedule";
+import { mondayOf, DAYS_OF_WEEK, MEAL_SLOTS } from "@/lib/weekly-menu-constants";
 import type { Prisma } from "@/generated/prisma/client";
 
 export type IngredientRequirement = {
@@ -29,16 +30,25 @@ export async function getWeeklyIngredientRequirements(): Promise<WeeklyIngredien
   const weekEndDate = new Date(weekStartDate);
   weekEndDate.setDate(weekEndDate.getDate() + 6);
 
-  const selections = await db.customerMealSelection.findMany({
-    where: { weekStartDate, customerProfile: { status: "ACTIVE" } },
-    ...selectionWithMeal,
-  });
+  const [selections, activeCustomers, schedule] = await Promise.all([
+    db.customerMealSelection.findMany({
+      where: { weekStartDate, customerProfile: { status: "ACTIVE" } },
+      ...selectionWithMeal,
+    }),
+    db.customerProfile.findMany({
+      where: { status: "ACTIVE" },
+      select: { id: true },
+    }),
+    getMealSchedule(),
+  ]);
 
   const totals = new Map<string, IngredientRequirement>();
 
-  for (const selection of selections) {
-    if (!selection.meal.recipe) continue;
-    for (const ri of selection.meal.recipe.ingredients) {
+  function addMeal(meal: {
+    recipe: { ingredients: { ingredient: { id: string; name: string; unit: string }; quantity: number }[] } | null;
+  }) {
+    if (!meal.recipe) return;
+    for (const ri of meal.recipe.ingredients) {
       const existing = totals.get(ri.ingredient.id);
       if (existing) {
         existing.totalQuantity += ri.quantity;
@@ -49,6 +59,21 @@ export async function getWeeklyIngredientRequirements(): Promise<WeeklyIngredien
           unit: ri.ingredient.unit,
           totalQuantity: ri.quantity,
         });
+      }
+    }
+  }
+
+  for (const { id: customerProfileId } of activeCustomers) {
+    for (const dayOfWeek of DAYS_OF_WEEK) {
+      for (const mealSlot of MEAL_SLOTS) {
+        const selection = selections.find(
+          (s) =>
+            s.customerProfileId === customerProfileId &&
+            s.dayOfWeek === dayOfWeek &&
+            s.mealSlot === mealSlot
+        );
+        const meal = selection?.meal ?? findScheduledMeal(schedule, dayOfWeek, mealSlot)?.meal;
+        if (meal) addMeal(meal);
       }
     }
   }

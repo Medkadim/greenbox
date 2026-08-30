@@ -207,8 +207,9 @@ model Meal {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  recipe     Recipe?
-  selections CustomerMealSelection[]
+  recipe        Recipe?
+  selections    CustomerMealSelection[]
+  scheduleSlots MealSchedule[]
 
   @@map("meal")
 }
@@ -288,6 +289,24 @@ model CustomerMealSelection {
 
   @@unique([customerProfileId, weekStartDate, dayOfWeek, mealSlot])
   @@map("customer_meal_selection")
+}
+
+// The default weekly schedule — one meal per day/slot, not tied to a
+// specific week. Applies automatically to every active customer that has
+// no explicit CustomerMealSelection of their own for that day/slot; the
+// admin can still override any individual customer via their planner.
+model MealSchedule {
+  id        String    @id @default(cuid())
+  dayOfWeek DayOfWeek
+  mealSlot  MealSlot
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  mealId String
+  meal   Meal   @relation(fields: [mealId], references: [id])
+
+  @@unique([dayOfWeek, mealSlot])
+  @@map("meal_schedule")
 }
 
 // ---------------------------------------------------------------------------

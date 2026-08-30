@@ -18,6 +18,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { CreateCustomerForm } from "@/components/admin/create-customer-form";
+import { CustomerStatusSelect } from "@/components/admin/customer-status-select";
 import { listCustomerProfiles } from "@/lib/data/customer";
 
 export default async function AdminCustomersPage() {
@@ -76,11 +77,10 @@ export default async function AdminCustomersPage() {
                     </TableCell>
                     <TableCell>{customer.phoneNumber}</TableCell>
                     <TableCell>
-                      <Badge
-                        variant={customer.status === "ACTIVE" ? "default" : "outline"}
-                      >
-                        {customer.status.toLowerCase()}
-                      </Badge>
+                      <CustomerStatusSelect
+                        customerProfileId={customer.id}
+                        status={customer.status}
+                      />
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-wrap gap-1">

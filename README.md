@@ -84,11 +84,14 @@ the admin manages, with no login attached.
   `Ingredient`, `Recipe`, `RecipeIngredient` — the basis for both the meal
   catalog and the kitchen's ingredient prep lists. No inventory/stock
   management, by design.
-- **Weekly meal planning:** `CustomerMealSelection` — the admin assigns each
-  customer a `Meal` for a given `weekStartDate` + `dayOfWeek` +
-  `mealSlot` (`BREAKFAST | LUNCH | DINNER`), with an optional `note` for
-  meal-specific remarks (e.g. "no onions"). Re-entered week to week; no
-  customer self-service, no separate menu-of-the-week catalog.
+- **Weekly meal planning:** `MealSchedule` — one evergreen default meal per
+  `dayOfWeek` + `mealSlot` (`BREAKFAST | LUNCH | DINNER`), edited at
+  `/admin/schedule`. It applies automatically to every `ACTIVE` customer.
+  `CustomerMealSelection` is the per-customer override: the admin assigns a
+  specific `Meal` for a given `weekStartDate` + `dayOfWeek` + `mealSlot`
+  (with an optional `note`, e.g. "no onions") on that customer's page —
+  wherever no override exists, `MealSchedule` fills the gap. No customer
+  self-service.
 - **Delivery:** `Driver`, `Delivery` (status pipeline: `PENDING → PREPARING
   → READY → ON_THE_WAY → DELIVERED`, with an address/GPS/time-window
   snapshot taken at creation time), one per `CustomerMealSelection`.
