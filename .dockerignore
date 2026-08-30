@@ -6,3 +6,8 @@ node_modules
 src/generated
 npm-debug.log*
 public/uploads
+# Separate Android/Capacitor project (driver-app/) — not part of the
+# Next.js image. Its node_modules and downloaded Android SDK can reach
+# hundreds of MB to 1GB+ once built locally on the server, which massively
+# bloats and slows down the Docker build context if not excluded here.
+driver-app
