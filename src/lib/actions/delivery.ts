@@ -10,12 +10,23 @@ import {
   updateDeliveryStatusSchema,
   type UpdateDeliveryStatusInput,
 } from "@/lib/validations/delivery";
-import { dayOfWeekFromDate, mondayOf, MEAL_SLOTS } from "@/lib/weekly-menu-constants";
+import {
+  dayOfWeekFromDate,
+  mondayOf,
+  parseDateParam,
+  MEAL_SLOTS,
+} from "@/lib/weekly-menu-constants";
 
-export async function generateDeliveriesForDate(date: Date) {
+// Takes the "YYYY-MM-DD" query param string rather than a Date so the day
+// is always parsed in the server's timezone. A client component parsing
+// the string into a Date itself (browser timezone) and passing that Date
+// across the server-action boundary would preserve the right instant but
+// the wrong calendar day whenever the browser and server timezones
+// disagree near midnight — see parseDateParam.
+export async function generateDeliveriesForDate(dateParam: string) {
   await requireDeliveryStaff();
 
-  const dayStart = new Date(date);
+  const dayStart = parseDateParam(dateParam);
   dayStart.setHours(0, 0, 0, 0);
   const dayOfWeek = dayOfWeekFromDate(dayStart);
   const weekStartDate = mondayOf(dayStart);
@@ -29,25 +40,11 @@ export async function generateDeliveriesForDate(date: Date) {
     getMealSchedule(),
   ]);
 
-  console.log("[generateDeliveriesForDate]", {
-    date: date.toISOString(),
-    dayStart: dayStart.toISOString(),
-    dayOfWeek,
-    weekStartDate: weekStartDate.toISOString(),
-    activeCustomers: activeCustomers.length,
-    existingSelections: selections.length,
-    scheduleEntries: schedule.length,
-  });
-
-  let created = 0;
-  let skipped = 0;
-
   for (const slot of MEAL_SLOTS) {
     const selectionByCustomer = new Map(
       selections.filter((s) => s.mealSlot === slot).map((s) => [s.customerProfileId, s])
     );
     const scheduled = findScheduledMeal(schedule, dayOfWeek, slot);
-    console.log(`[generateDeliveriesForDate] slot=${slot} scheduled=${scheduled ? scheduled.mealId : "none"}`);
 
     for (const profile of activeCustomers) {
       let selection = selectionByCustomer.get(profile.id);
@@ -76,10 +73,7 @@ export async function generateDeliveriesForDate(date: Date) {
           include: { customerProfile: true },
         });
       }
-      if (!selection) {
-        skipped++;
-        continue;
-      }
+      if (!selection) continue;
 
       await db.delivery.upsert({
         where: { customerMealSelectionId: selection.id },
@@ -96,11 +90,8 @@ export async function generateDeliveriesForDate(date: Date) {
         },
         update: {},
       });
-      created++;
     }
   }
-
-  console.log("[generateDeliveriesForDate] done", { created, skipped });
 
   revalidatePath("/delivery");
 }
