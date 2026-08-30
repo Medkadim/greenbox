@@ -6,7 +6,6 @@ import { RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 
 import { generateDeliveriesForDate } from "@/lib/actions/delivery";
-import { parseDateParam } from "@/lib/weekly-menu-constants";
 import { Button } from "@/components/ui/button";
 
 export function GenerateDeliveriesButton({ date }: { date: string }) {
@@ -21,7 +20,7 @@ export function GenerateDeliveriesButton({ date }: { date: string }) {
       onClick={() =>
         startTransition(async () => {
           try {
-            await generateDeliveriesForDate(parseDateParam(date));
+            await generateDeliveriesForDate(date);
             router.refresh();
           } catch {
             toast.error("Could not refresh deliveries.");
