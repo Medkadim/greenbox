@@ -17,7 +17,12 @@ services:
       retries: 10
 
   app:
-    build: .
+    build:
+      context: .
+      args:
+        BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:-dev-only-secret-change-me}
+        BETTER_AUTH_URL: ${BETTER_AUTH_URL:-http://localhost:3000}
+        NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
     restart: unless-stopped
     depends_on:
       db:
